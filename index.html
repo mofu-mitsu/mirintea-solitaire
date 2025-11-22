@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirintea Solitaire</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Player Name Modal -->
+    <div id="nameModal" class="modal">
+        <div class="modal-content">
+            <h2>あなたの名前を教えて♡</h2>
+            <input type="text" id="playerName" placeholder="みつき">
+            <button id="startButton">開始</button>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div class="game-container">
+        <!-- Player Side -->
+        <div class="player-side">
+            <h2 id="playerNameDisplay">Player</h2>
+            <div class="game-board" id="playerBoard">
+                <!-- Foundation piles (A-K) -->
+                <div class="foundations">
+                    <div class="foundation" id="player-foundation-0"></div>
+                    <div class="foundation" id="player-foundation-1"></div>
+                    <div class="foundation" id="player-foundation-2"></div>
+                    <div class="foundation" id="player-foundation-3"></div>
+                </div>
+                
+                <!-- Tableau piles -->
+                <div class="tableau">
+                    <div class="tableau-column" id="player-tableau-0"></div>
+                    <div class="tableau-column" id="player-tableau-1"></div>
+                    <div class="tableau-column" id="player-tableau-2"></div>
+                    <div class="tableau-column" id="player-tableau-3"></div>
+                    <div class="tableau-column" id="player-tableau-4"></div>
+                    <div class="tableau-column" id="player-tableau-5"></div>
+                    <div class="tableau-column" id="player-tableau-6"></div>
+                </div>
+                
+                <!-- Stock and Waste piles -->
+                <div class="stock-waste">
+                    <div class="stock" id="player-stock"></div>
+                    <div class="waste" id="player-waste"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mirintea Side -->
+        <div class="mirintea-side">
+            <h2>みりんてゃ</h2>
+            <div class="game-board" id="mirinteaBoard">
+                <!-- Foundation piles (A-K) -->
+                <div class="foundations">
+                    <div class="foundation" id="mirintea-foundation-0"></div>
+                    <div class="foundation" id="mirintea-foundation-1"></div>
+                    <div class="foundation" id="mirintea-foundation-2"></div>
+                    <div class="foundation" id="mirintea-foundation-3"></div>
+                </div>
+                
+                <!-- Tableau piles -->
+                <div class="tableau">
+                    <div class="tableau-column" id="mirintea-tableau-0"></div>
+                    <div class="tableau-column" id="mirintea-tableau-1"></div>
+                    <div class="tableau-column" id="mirintea-tableau-2"></div>
+                    <div class="tableau-column" id="mirintea-tableau-3"></div>
+                    <div class="tableau-column" id="mirintea-tableau-4"></div>
+                    <div class="tableau-column" id="mirintea-tableau-5"></div>
+                    <div class="tableau-column" id="mirintea-tableau-6"></div>
+                </div>
+                
+                <!-- Stock and Waste piles -->
+                <div class="stock-waste">
+                    <div class="stock" id="mirintea-stock"></div>
+                    <div class="waste" id="mirintea-waste"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mirintea Character Window -->
+    <div class="character-window" id="mirinteaWindow">
+        <div class="character-header">
+            <span class="drag-handle">↕</span>
+            <span class="close-btn" id="closeBtn">×</span>
+        </div>
+        <div class="character-content">
+            <img id="mirinteaImage" src="mirintea/default.png" alt="Mirintea">
+            <div class="dialogue-box">
+                <p id="mirinteaDialogue">ねぇ、みつき？今日こそ勝つから覚悟して？♡</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Win/Lose Overlay -->
+    <div id="gameOverlay" class="overlay hidden">
+        <div class="overlay-content">
+            <img id="resultImage" src="mirintea/win.png" alt="Result">
+            <p id="resultText">わーーーい！勝利のハグして！！今！！！（圧）</p>
+            <button id="restartButton">もう一度遊ぶ</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

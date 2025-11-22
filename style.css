@@ -1,0 +1,342 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #ffcce6, #cce5ff);
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: #333;
+}
+
+/* Modal Styles */
+.modal {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    color: #ff66b2;
+}
+
+#playerName {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 2px solid #ff66b2;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+#startButton {
+    background: #ff66b2;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#startButton:hover {
+    background: #ff3399;
+}
+
+/* Game Container */
+.game-container {
+    display: flex;
+    justify-content: space-around;
+    padding: 20px;
+    gap: 20px;
+}
+
+.player-side, .mirintea-side {
+    flex: 1;
+    max-width: 500px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.player-side h2, .mirintea-side h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #ff66b2;
+}
+
+/* Game Board */
+.game-board {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Foundations */
+.foundations {
+    display: flex;
+    justify-content: space-between;
+    height: 120px;
+}
+
+.foundation {
+    width: 80px;
+    height: 120px;
+    background: rgba(0, 100, 0, 0.2);
+    border: 2px dashed #006400;
+    border-radius: 8px;
+}
+
+/* Tableau */
+.tableau {
+    display: flex;
+    justify-content: space-between;
+    min-height: 300px;
+}
+
+.tableau-column {
+    width: 80px;
+    min-height: 300px;
+    background: rgba(0, 100, 0, 0.1);
+    border: 2px dashed #006400;
+    border-radius: 8px;
+    position: relative;
+}
+
+/* Stock and Waste */
+.stock-waste {
+    display: flex;
+    justify-content: flex-start;
+    gap: 20px;
+    height: 120px;
+}
+
+.stock, .waste {
+    width: 80px;
+    height: 120px;
+    background: rgba(0, 100, 0, 0.2);
+    border: 2px dashed #006400;
+    border-radius: 8px;
+}
+
+/* Card Styles */
+.card {
+    width: 70px;
+    height: 100px;
+    background: white;
+    border: 1px solid #333;
+    border-radius: 6px;
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.card.red {
+    color: #d32f2f;
+}
+
+.card.black {
+    color: #333;
+}
+
+.card.back {
+    background: linear-gradient(135deg, #ff66b2, #9c27b0);
+    background-image: url('cards/back.png');
+    background-size: cover;
+}
+
+.card.face-up {
+    background: white;
+}
+
+/* Character Window */
+.character-window {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.character-header {
+    background: #ff66b2;
+    color: white;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
+
+.drag-handle {
+    cursor: move;
+}
+
+.close-btn {
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.character-content {
+    padding: 15px;
+    text-align: center;
+}
+
+#mirinteaImage {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 10px;
+}
+
+.dialogue-box {
+    background: #fff0f5;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 10px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ffb6c1;
+}
+
+.dialogue-box p {
+    font-size: 14px;
+    color: #333;
+}
+
+/* Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.overlay.hidden {
+    display: none;
+}
+
+.overlay-content {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+}
+
+#resultImage {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 20px;
+}
+
+#resultText {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+#restartButton {
+    background: #ff66b2;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+#restartButton:hover {
+    background: #ff3399;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .player-side, .mirintea-side {
+        width: 100%;
+        max-width: 600px;
+        margin-bottom: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .foundations, .tableau, .stock-waste {
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .foundation, .tableau-column, .stock, .waste {
+        width: 60px;
+        height: 90px;
+    }
+    
+    .card {
+        width: 55px;
+        height: 80px;
+        font-size: 14px;
+    }
+    
+    .character-window {
+        width: 250px;
+        bottom: 10px;
+        right: 10px;
+    }
+}
