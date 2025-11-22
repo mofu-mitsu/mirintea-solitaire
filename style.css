@@ -176,7 +176,7 @@ body {
 
 .card.back {
     background: linear-gradient(135deg, #ff66b2, #9c27b0);
-    background-image: url('cards/back.png');
+    background-image: url('/cards/back.png');  /* 先頭に / 追加でルート指定！ */
     background-size: cover;
 }
 
