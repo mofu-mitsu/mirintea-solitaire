@@ -1,7 +1,7 @@
 // Game constants
 // Game constants
 const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];\nconst RANK_MAP = {'A': 'ace', 'J': 'jack', 'Q': 'queen', 'K': 'king'};
 const COLORS = {
     hearts: 'red',
     diamonds: 'red',
@@ -9,7 +9,7 @@ const COLORS = {
     spades: 'black'
 };
 
-// Game state
+// Game state\n\n// Helper function to get the correct card file name\nfunction getCardFileName(card) {\n    const rank = RANK_MAP[card.rank] || card.rank.toLowerCase();\n    const suit = card.suit.toLowerCase();\n    return `${rank}_of_${suit}`;\n}
 let gameState = {
     player: {
         stock: [],
@@ -553,7 +553,7 @@ function createCardElement(card, hideDetails = false) {
         if (card.faceUp) {
             cardElement.classList.add('face-up');
             // Use card image
-            cardElement.style.backgroundImage = `url('cards/${card.suit}_${card.rank}.png')`;
+            cardElement.style.backgroundImage = `url('cards/${getCardFileName(card)}.png')`;
             cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
@@ -563,7 +563,7 @@ function createCardElement(card, hideDetails = false) {
         if (card.faceUp) {
             cardElement.classList.add('face-up');
             // Use card image
-            cardElement.style.backgroundImage = `url('cards/${card.suit}_${card.rank}.png')`;
+            cardElement.style.backgroundImage = `url('cards/${getCardFileName(card)}.png')`;
             cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
