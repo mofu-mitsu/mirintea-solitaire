@@ -80,7 +80,6 @@ const mirinteaDialogues = {
         "負けたくないのに…勝ちたいのに…好きなのに…なんなの〜〜！！",
         "ん？落ち込んでる？ギューしてあげよっか？",
         "うわ、今の配置めっちゃ可愛い…スクショしたい",
-        "カードめくる音って落ち着くよね…ねぇ聞いて？",
         "{name}の手って継麗…カード持ってる指が好き",
         "はいはい、次のターンいくよ〜〜！集中〜〜！",
         "この瞬間が一番好き…並んでゲームしてるのって恋じゃん"
@@ -161,7 +160,7 @@ function makeDraggable(element) {
 
 // Start the game
 function startGame() {
-    const name = playerNameInput.value.trim() || '{name}';
+    const name = playerNameInput.value.trim() || 'みつき';
     gameState.playerName = name;
     playerNameDisplay.textContent = name;
     localStorage.setItem('solitairePlayerName', name);
@@ -380,7 +379,9 @@ function createCardElement(card, hideDetails = false) {
         // For opponent cards, show back or face down
         if (card.faceUp) {
             cardElement.classList.add('face-up');
-            cardElement.textContent = `${card.rank}`;
+            // Use card image
+            cardElement.style.backgroundImage = `url('cards/${card.suit}_${card.rank}.png')`;
+            cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
         }
@@ -388,7 +389,9 @@ function createCardElement(card, hideDetails = false) {
         // For player cards
         if (card.faceUp) {
             cardElement.classList.add('face-up');
-            cardElement.textContent = `${card.rank}`;
+            // Use card image
+            cardElement.style.backgroundImage = `url('cards/${card.suit}_${card.rank}.png')`;
+            cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
         }
