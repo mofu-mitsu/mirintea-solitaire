@@ -259,6 +259,7 @@ const mirinteaDialogues = {
     ]
 };
 
+
 // DOM Elements
 const nameModal = document.getElementById('nameModal');
 const playerNameInput = document.getElementById('playerName');
@@ -543,48 +544,32 @@ function renderMirinteaBoard() {
     }
 }
 
-// Create a card element（ここを強化！ 画像パスをフルURLに）
+// Create a card element
 function createCardElement(card, hideDetails = false) {
     const cardElement = document.createElement('div');
     cardElement.className = `card ${card.color}`;
-    
-    const baseUrl = window.location.origin + '/';  // VercelのルートURL自動取得（これで相対パス解決！）
     
     if (hideDetails) {
         // For opponent cards, show back or face down
         if (card.faceUp) {
             cardElement.classList.add('face-up');
-            const imgPath = `${baseUrl}cards/${getCardFileName(card)}.png`;
-            cardElement.style.backgroundImage = `url('${imgPath}')`;
+            // Use card image
+            cardElement.style.backgroundImage = `url('cards/${getCardFileName(card)}.png')`;
             cardElement.style.backgroundSize = 'cover';
-            cardElement.style.backgroundPosition = 'center';  // 追加：位置調整
         } else {
             cardElement.classList.add('back');
-            const backPath = `${baseUrl}cards/back.png`;
-            cardElement.style.backgroundImage = `url('${backPath}')`;
-            cardElement.style.backgroundSize = 'cover';
         }
     } else {
         // For player cards
         if (card.faceUp) {
             cardElement.classList.add('face-up');
-            const imgPath = `${baseUrl}cards/${getCardFileName(card)}.png`;
-            cardElement.style.backgroundImage = `url('${imgPath}')`;
+            // Use card image
+            cardElement.style.backgroundImage = `url('cards/${getCardFileName(card)}.png')`;
             cardElement.style.backgroundSize = 'cover';
-            cardElement.style.backgroundPosition = 'center';
         } else {
             cardElement.classList.add('back');
-            const backPath = `${baseUrl}cards/back.png`;
-            cardElement.style.backgroundImage = `url('${backPath}')`;
-            cardElement.style.backgroundSize = 'cover';
         }
     }
-    
-    // フォールバック：画像ロード失敗したら文字表示（デバッグ用）
-    cardElement.onerror = function() {
-        cardElement.innerHTML = `${card.rank}${card.suit}`;
-        cardElement.style.backgroundImage = 'none';  // 画像エラー時は文字に戻す
-    };
     
     return cardElement;
 }
@@ -746,20 +731,16 @@ function checkWinCondition(player) {
     return true;
 }
 
-// Show game over screen（ここもフルURLに！）
+// Show game over screen
 function showGameOver(playerWon) {
     gameState.gameOver = true;
     
-    const baseUrl = window.location.origin + '/';  // 同じく自動URL
-    
     if (playerWon) {
         resultText.textContent = getRandomDialogue('win');
-        resultImage.src = `${baseUrl}mirintea/win.png`;  // フルパス！
-        resultImage.onerror = () => { resultImage.src = `${baseUrl}mirintea/default.png`; };  // エラー時はデフォルトに
+        resultImage.src = 'mirintea/win.png';
     } else {
         resultText.textContent = getRandomDialogue('lose');
-        resultImage.src = `${baseUrl}mirintea/lose.png`;
-        resultImage.onerror = () => { resultImage.src = `${baseUrl}mirintea/default.png`; };
+        resultImage.src = 'mirintea/lose.png';
     }
     
     gameOverlay.classList.remove('hidden');
