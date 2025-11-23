@@ -13,7 +13,9 @@ const COLORS = {
 function getCardFileName(card) {
     const rank = RANK_MAP[card.rank] || card.rank.toLowerCase();
     const suit = card.suit.toLowerCase();
-    return `${rank}_of_${suit}`;
+    const fileName = `${rank}_of_${suit}`;
+    console.log('Card file name:', fileName, 'for card:', card);
+    return fileName;
 }
 
 // Game state
@@ -52,7 +54,7 @@ const mirinteaDialogues = {
         "ほら、始めよ〜？{name}の反応見るの楽しみなんだけど♡",
         "スタートってドキドキしない？…あたしはするよ？ねぇ、してってば♡",
         "あたしが相手なんだよ？気抜いたら一瞬で置いてくからね？",
-        "今日のあたしね、ちょっとだけ本気出す日なの。ちょっとだけね？♡",
+        "今日のわたし…ちょっとだけ本気出す日なの。ちょっとだけね？♡",
         "{name}ってさ、真剣な顔かわいくて好きだよ。ほら、もっと見せて？",
         "ねぇ{name}、今日はちゃんとみりんてゃの相手してよ？約束♡",
         "ふふっ…{name}、始めよ？みりんてゃ、もう指あっためて待ってたんだから〜♡",
@@ -327,6 +329,9 @@ function startGame() {
     initializeDeck();
     dealCards();
     renderGame();
+    addFoundationEventListeners();
+    addTableauEventListeners();
+    addStockEventListener(); // Add this line
     showRandomDialogue('start');
     
     // Start Mirintea's AI
@@ -531,13 +536,25 @@ function createCardElement(card, hideDetails = false) {
     const cardElement = document.createElement('div');
     cardElement.className = `card ${card.color}`;
     
+    // Debug: Log the card information
+    console.log('Creating card element:', card);
+    
     if (hideDetails) {
         // For opponent cards, show back or face down
         if (card.faceUp) {
             cardElement.classList.add('face-up');
             // Use card image
-            cardElement.style.backgroundImage = `url('/cards/${getCardFileName(card)}.png')`;
+            const fileName = getCardFileName(card);
+            const imagePath = `/cards/${fileName}.png`;
+            cardElement.style.backgroundImage = `url('${imagePath}')`;
             cardElement.style.backgroundSize = 'cover';
+            // Debug: Log the image path
+            console.log('Card image path (opponent):', imagePath);
+            // Additional debug: Check if image exists
+            const img = new Image();
+            img.onload = () => console.log('Image loaded successfully:', imagePath);
+            img.onerror = () => console.error('Failed to load image:', imagePath);
+            img.src = imagePath;
         } else {
             cardElement.classList.add('back');
         }
@@ -546,8 +563,17 @@ function createCardElement(card, hideDetails = false) {
         if (card.faceUp) {
             cardElement.classList.add('face-up');
             // Use card image
-            cardElement.style.backgroundImage = `url('/cards/${getCardFileName(card)}.png')`;
+            const fileName = getCardFileName(card);
+            const imagePath = `/cards/${fileName}.png`;
+            cardElement.style.backgroundImage = `url('${imagePath}')`;
             cardElement.style.backgroundSize = 'cover';
+            // Debug: Log the image path
+            console.log('Card image path (player):', imagePath);
+            // Additional debug: Check if image exists
+            const img = new Image();
+            img.onload = () => console.log('Image loaded successfully:', imagePath);
+            img.onerror = () => console.error('Failed to load image:', imagePath);
+            img.src = imagePath;
         } else {
             cardElement.classList.add('back');
         }
@@ -558,8 +584,10 @@ function createCardElement(card, hideDetails = false) {
 
 // Draw a card from stock
 function drawFromStock() {
+    console.log('Drawing from stock');
     if (gameState.player.stock.length > 0) {
         const card = gameState.player.stock.pop();
+        console.log('Drew card:', card);
         card.faceUp = true;
         gameState.player.waste.push(card);
         renderGame();
@@ -570,6 +598,7 @@ function drawFromStock() {
         }
     } else if (gameState.player.waste.length > 0) {
         // Reset stock from waste
+        console.log('Resetting stock from waste');
         while (gameState.player.waste.length > 0) {
             const card = gameState.player.waste.pop();
             card.faceUp = false;
@@ -581,12 +610,15 @@ function drawFromStock() {
 
 // Select a card
 function selectCard(player, col, row) {
+    console.log('Selecting card:', player, col, row);
     if (player !== 'player') return;
     
     const card = gameState.player.tableau[col][row];
+    console.log('Selected card:', card);
     if (!card.faceUp) return;
     
     gameState.selectedCard = { player, col, row };
+    console.log('Set selected card:', gameState.selectedCard);
     
     // Highlight selected card
     renderGame();
@@ -599,6 +631,87 @@ function highlightSelectedCard(player, col, row) {
     if (cardElement) {
         cardElement.style.boxShadow = '0 0 10px gold';
         cardElement.style.transform = 'translateY(-10px)';
+    }
+}
+
+// Move selected card to foundation
+function moveCardToFoundation(foundationIndex) {
+    console.log('Moving card to foundation:', foundationIndex);
+    if (!gameState.selectedCard) {
+        console.log('No card selected');
+        return;
+    }
+    
+    const { player, col, row } = gameState.selectedCard;
+    if (player !== 'player') return;
+    
+    const card = gameState.player.tableau[col][row];
+    console.log('Moving card:', card);
+    
+    // Check if card can be moved to foundation
+    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
+        console.log('Card can be moved to foundation');
+        // Remove card from tableau
+        gameState.player.tableau[col].splice(row, 1);
+        // Add card to foundation
+        gameState.player.foundations[foundationIndex].push(card);
+        // Clear selection
+        gameState.selectedCard = null;
+        // Re-render game
+        renderGame();
+        
+        // Check if player won
+        if (checkWinCondition('player')) {
+            showGameOver(true);
+        }
+    } else {
+        console.log('Card cannot be moved to foundation');
+    }
+}
+
+// Move card from waste to foundation
+function moveWasteToFoundation(foundationIndex) {
+    console.log('Moving waste card to foundation:', foundationIndex);
+    if (gameState.player.waste.length === 0) {
+        console.log('No card in waste');
+        return;
+    }
+    
+    const card = gameState.player.waste[gameState.player.waste.length - 1];
+    console.log('Moving card:', card);
+    
+    // Check if card can be moved to foundation
+    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
+        console.log('Card can be moved to foundation');
+        // Remove card from waste
+        gameState.player.waste.pop();
+        // Add card to foundation
+        gameState.player.foundations[foundationIndex].push(card);
+        // Re-render game
+        renderGame();
+        
+        // Check if player won
+        if (checkWinCondition('player')) {
+            showGameOver(true);
+        }
+    } else {
+        console.log('Card cannot be moved to foundation');
+    }
+}
+
+// Update foundation event listeners to handle waste cards
+function addFoundationEventListeners() {
+    for (let i = 0; i < 4; i++) {
+        const foundation = document.getElementById(`player-foundation-${i}`);
+        foundation.addEventListener('click', () => {
+            // If a card is selected, move it to foundation
+            if (gameState.selectedCard) {
+                moveCardToFoundation(i);
+            } else {
+                // Otherwise, try to move from waste
+                moveWasteToFoundation(i);
+            }
+        });
     }
 }
 
@@ -703,6 +816,66 @@ function getNextRank(rank) {
     return index < RANKS.length - 1 ? RANKS[index + 1] : null;
 }
 
+// Move selected card to tableau column
+function moveCardToTableau(targetCol) {
+    console.log('Moving card to tableau column:', targetCol);
+    if (!gameState.selectedCard) {
+        console.log('No card selected');
+        return;
+    }
+    
+    const { player, col, row } = gameState.selectedCard;
+    if (player !== 'player') return;
+    
+    // Get the selected card
+    const card = gameState.player.tableau[col][row];
+    console.log('Moving card:', card);
+    
+    // Check if card can be moved to tableau column
+    const targetColumn = gameState.player.tableau[targetCol];
+    if (canMoveToTableau(targetColumn, card)) {
+        console.log('Card can be moved to tableau column');
+        // Remove card from current position
+        const cardsToMove = gameState.player.tableau[col].splice(row);
+        // Add cards to target column
+        gameState.player.tableau[targetCol].push(...cardsToMove);
+        // Clear selection
+        gameState.selectedCard = null;
+        // Re-render game
+        renderGame();
+    } else {
+        console.log('Card cannot be moved to tableau column');
+    }
+}
+
+// Check if a card can be moved to a tableau column
+function canMoveToTableau(column, card) {
+    // If column is empty, only K can be placed
+    if (column.length === 0) {
+        return card.rank === 'K';
+    }
+    
+    // Get the top card of the column
+    const topCard = column[column.length - 1];
+    
+    // Card must be opposite color and one rank lower
+    return topCard.color !== card.color && getNextRank(card.rank) === topCard.rank;
+}
+
+// Add click event listeners to tableau columns
+function addTableauEventListeners() {
+    for (let col = 0; col < 7; col++) {
+        const tableauColumn = document.getElementById(`player-tableau-${col}`);
+        tableauColumn.addEventListener('click', () => moveCardToTableau(col));
+    }
+}
+
+// Add click event listeners to stock pile
+function addStockEventListener() {
+    const stock = document.getElementById('player-stock');
+    stock.addEventListener('click', drawFromStock);
+}
+
 // Check win condition
 function checkWinCondition(player) {
     for (let i = 0; i < 4; i++) {
@@ -744,6 +917,19 @@ function getRandomDialogue(type) {
         return dialogues[randomIndex];
     }
     return '';
+}
+
+// Update Mirintea's image
+function updateMirinteaImage(imageName) {
+    const imagePath = `/mirintea/${imageName}.png`;
+    console.log('Updating Mirintea image to:', imagePath);
+    mirinteaImage.src = imagePath;
+    
+    // Additional debug: Check if image exists
+    const img = new Image();
+    img.onload = () => console.log('Mirintea image loaded successfully:', imagePath);
+    img.onerror = () => console.error('Failed to load Mirintea image:', imagePath);
+    img.src = imagePath;
 }
 
 // Show idle dialogue periodically
