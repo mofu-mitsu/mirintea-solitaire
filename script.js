@@ -427,6 +427,7 @@ function dealCards() {
 function renderGame() {
     renderPlayerBoard();
     renderMirinteaBoard();
+    renderTableau(); // Add this line
 }
 
 // Render player's board
@@ -461,26 +462,7 @@ function renderPlayerBoard() {
         }
     }
     
-    // Render tableau
-    for (let col = 0; col < 7; col++) {
-        const tableauColumn = document.getElementById(`player-tableau-${col}`);
-        tableauColumn.innerHTML = '';
-        
-        for (let row = 0; row < gameState.player.tableau[col].length; row++) {
-            const card = gameState.player.tableau[col][row];
-            const cardElement = createCardElement(card);
-            
-            // Position cards vertically
-            cardElement.style.top = `${row * 20}px`;
-            
-            // Add click event if card is face up
-            if (card.faceUp) {
-                cardElement.addEventListener('click', () => selectCard('player', col, row));
-            }
-            
-            tableauColumn.appendChild(cardElement);
-        }
-    }
+    // Remove tableau rendering - now handled by renderTableau function
 }
 
 // Render Mirintea's board
@@ -514,21 +496,7 @@ function renderMirinteaBoard() {
         }
     }
     
-    // Render tableau
-    for (let col = 0; col < 7; col++) {
-        const tableauColumn = document.getElementById(`mirintea-tableau-${col}`);
-        tableauColumn.innerHTML = '';
-        
-        for (let row = 0; row < gameState.mirintea.tableau[col].length; row++) {
-            const card = gameState.mirintea.tableau[col][row];
-            const cardElement = createCardElement(card, true); // Hide card details for Mirintea
-            
-            // Position cards vertically
-            cardElement.style.top = `${row * 20}px`;
-            
-            tableauColumn.appendChild(cardElement);
-        }
-    }
+    // Remove tableau rendering - now handled by renderTableau function
 }
 
 // Create a card element
@@ -539,13 +507,22 @@ function createCardElement(card, hideDetails = false) {
     // Debug: Log the card information
     console.log('Creating card element:', card);
     
+    // Make card draggable
+    cardElement.draggable = true;
+    
+    // Add drag start event
+    cardElement.addEventListener('dragstart', (e) => {
+        console.log('Drag start:', card);
+        e.dataTransfer.setData('text/plain', JSON.stringify(card));
+    });
+    
     if (hideDetails) {
         // For opponent cards, show back or face down
         if (card.faceUp) {
             cardElement.classList.add('face-up');
             // Use card image
             const fileName = getCardFileName(card);
-            const imagePath = `/cards/${fileName}.png`;
+            const imagePath = `cards/${fileName}.png`;  // Changed to relative path
             cardElement.style.backgroundImage = `url('${imagePath}')`;
             cardElement.style.backgroundSize = 'cover';
             // Debug: Log the image path
@@ -564,7 +541,7 @@ function createCardElement(card, hideDetails = false) {
             cardElement.classList.add('face-up');
             // Use card image
             const fileName = getCardFileName(card);
-            const imagePath = `/cards/${fileName}.png`;
+            const imagePath = `cards/${fileName}.png`;  // Changed to relative path
             cardElement.style.backgroundImage = `url('${imagePath}')`;
             cardElement.style.backgroundSize = 'cover';
             // Debug: Log the image path
@@ -669,40 +646,59 @@ function moveCardToFoundation(foundationIndex) {
     }
 }
 
-// Move card from waste to foundation
-function moveWasteToFoundation(foundationIndex) {
-    console.log('Moving waste card to foundation:', foundationIndex);
-    if (gameState.player.waste.length === 0) {
-        console.log('No card in waste');
+// Move selected card to tableau column
+function moveCardToTableau(targetCol) {
+    console.log('Moving card to tableau column:', targetCol);
+    if (!gameState.selectedCard) {
+        console.log('No card selected');
         return;
     }
     
-    const card = gameState.player.waste[gameState.player.waste.length - 1];
+    const { player, col, row } = gameState.selectedCard;
+    if (player !== 'player') return;
+    
+    // Get the selected card
+    const card = gameState.player.tableau[col][row];
     console.log('Moving card:', card);
     
-    // Check if card can be moved to foundation
-    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
-        console.log('Card can be moved to foundation');
-        // Remove card from waste
-        gameState.player.waste.pop();
-        // Add card to foundation
-        gameState.player.foundations[foundationIndex].push(card);
+    // Check if card can be moved to tableau column
+    const targetColumn = gameState.player.tableau[targetCol];
+    if (canMoveToTableau(targetColumn, card)) {
+        console.log('Card can be moved to tableau column');
+        // Remove card from current position
+        const cardsToMove = gameState.player.tableau[col].splice(row);
+        // Add cards to target column
+        gameState.player.tableau[targetCol].push(...cardsToMove);
+        // Clear selection
+        gameState.selectedCard = null;
         // Re-render game
         renderGame();
-        
-        // Check if player won
-        if (checkWinCondition('player')) {
-            showGameOver(true);
-        }
     } else {
-        console.log('Card cannot be moved to foundation');
+        console.log('Card cannot be moved to tableau column');
     }
 }
 
-// Update foundation event listeners to handle waste cards
+// Add drag and drop event listeners to foundation piles
 function addFoundationEventListeners() {
     for (let i = 0; i < 4; i++) {
         const foundation = document.getElementById(`player-foundation-${i}`);
+        // Allow drop
+        foundation.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        
+        // Handle drop
+        foundation.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const cardData = e.dataTransfer.getData('text/plain');
+            const card = JSON.parse(cardData);
+            console.log('Dropped card on foundation:', card);
+            
+            // Move card to foundation
+            moveCardToFoundation(i);
+        });
+        
+        // Click event (for non-drag devices)
         foundation.addEventListener('click', () => {
             // If a card is selected, move it to foundation
             if (gameState.selectedCard) {
@@ -712,6 +708,32 @@ function addFoundationEventListeners() {
                 moveWasteToFoundation(i);
             }
         });
+    }
+}
+
+// Add drag and drop event listeners to tableau columns
+function addTableauEventListeners() {
+    for (let col = 0; col < 7; col++) {
+        const tableauColumn = document.getElementById(`player-tableau-${col}`);
+        
+        // Allow drop
+        tableauColumn.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        
+        // Handle drop
+        tableauColumn.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const cardData = e.dataTransfer.getData('text/plain');
+            const card = JSON.parse(cardData);
+            console.log('Dropped card on tableau:', card);
+            
+            // Move card to tableau column
+            moveCardToTableau(col);
+        });
+        
+        // Click event (for non-drag devices)
+        tableauColumn.addEventListener('click', () => moveCardToTableau(col));
     }
 }
 
@@ -816,35 +838,33 @@ function getNextRank(rank) {
     return index < RANKS.length - 1 ? RANKS[index + 1] : null;
 }
 
-// Move selected card to tableau column
-function moveCardToTableau(targetCol) {
-    console.log('Moving card to tableau column:', targetCol);
-    if (!gameState.selectedCard) {
-        console.log('No card selected');
+// Move card from waste to foundation
+function moveWasteToFoundation(foundationIndex) {
+    console.log('Moving waste card to foundation:', foundationIndex);
+    if (gameState.player.waste.length === 0) {
+        console.log('No card in waste');
         return;
     }
     
-    const { player, col, row } = gameState.selectedCard;
-    if (player !== 'player') return;
-    
-    // Get the selected card
-    const card = gameState.player.tableau[col][row];
+    const card = gameState.player.waste[gameState.player.waste.length - 1];
     console.log('Moving card:', card);
     
-    // Check if card can be moved to tableau column
-    const targetColumn = gameState.player.tableau[targetCol];
-    if (canMoveToTableau(targetColumn, card)) {
-        console.log('Card can be moved to tableau column');
-        // Remove card from current position
-        const cardsToMove = gameState.player.tableau[col].splice(row);
-        // Add cards to target column
-        gameState.player.tableau[targetCol].push(...cardsToMove);
-        // Clear selection
-        gameState.selectedCard = null;
+    // Check if card can be moved to foundation
+    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
+        console.log('Card can be moved to foundation');
+        // Remove card from waste
+        gameState.player.waste.pop();
+        // Add card to foundation
+        gameState.player.foundations[foundationIndex].push(card);
         // Re-render game
         renderGame();
+        
+        // Check if player won
+        if (checkWinCondition('player')) {
+            showGameOver(true);
+        }
     } else {
-        console.log('Card cannot be moved to tableau column');
+        console.log('Card cannot be moved to foundation');
     }
 }
 
@@ -860,6 +880,44 @@ function canMoveToTableau(column, card) {
     
     // Card must be opposite color and one rank lower
     return topCard.color !== card.color && getNextRank(card.rank) === topCard.rank;
+}
+
+// Update the renderTableau function to add click and drag events to cards
+function renderTableau() {
+    // Render player tableau
+    for (let col = 0; col < 7; col++) {
+        const tableauColumn = document.getElementById(`player-tableau-${col}`);
+        tableauColumn.innerHTML = '';
+        
+        for (let row = 0; row < gameState.player.tableau[col].length; row++) {
+            const card = gameState.player.tableau[col][row];
+            const cardElement = createCardElement(card);
+            
+            // Position cards vertically
+            cardElement.style.top = `${row * 20}px`;
+            
+            // Add click event to select card
+            cardElement.addEventListener('click', () => selectCard('player', col, row));
+            
+            tableauColumn.appendChild(cardElement);
+        }
+    }
+    
+    // Render Mirintea tableau
+    for (let col = 0; col < 7; col++) {
+        const tableauColumn = document.getElementById(`mirintea-tableau-${col}`);
+        tableauColumn.innerHTML = '';
+        
+        for (let row = 0; row < gameState.mirintea.tableau[col].length; row++) {
+            const card = gameState.mirintea.tableau[col][row];
+            const cardElement = createCardElement(card, true); // Hide card details for Mirintea
+            
+            // Position cards vertically
+            cardElement.style.top = `${row * 20}px`;
+            
+            tableauColumn.appendChild(cardElement);
+        }
+    }
 }
 
 // Add click event listeners to tableau columns
@@ -921,7 +979,7 @@ function getRandomDialogue(type) {
 
 // Update Mirintea's image
 function updateMirinteaImage(imageName) {
-    const imagePath = `/mirintea/${imageName}.png`;
+    const imagePath = `mirintea/${imageName}.png`;  // Changed to relative path
     console.log('Updating Mirintea image to:', imagePath);
     mirinteaImage.src = imagePath;
     
