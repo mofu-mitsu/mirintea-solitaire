@@ -580,6 +580,34 @@ function createCardElement(card, hideDetails = false) {
         e.dataTransfer.setData('text/plain', JSON.stringify(card));
     });
     
+    // Add touch events for mobile devices
+    cardElement.addEventListener('touchstart', (e) => {
+        console.log('Touch start:', card);
+        // Prevent scrolling when touching cards
+        e.preventDefault();
+        
+        // Store card data for touch move
+        cardElement.cardData = card;
+    });
+    
+    cardElement.addEventListener('touchend', (e) => {
+        console.log('Touch end:', card);
+        // Find the drop target
+        const touch = e.changedTouches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        // Check if the element is a foundation or tableau column
+        if (element && element.id) {
+            if (element.id.startsWith('player-foundation-')) {
+                const foundationIndex = parseInt(element.id.split('-')[2]);
+                moveCardToFoundation(foundationIndex);
+            } else if (element.id.startsWith('player-tableau-')) {
+                const colIndex = parseInt(element.id.split('-')[2]);
+                moveCardToTableau(colIndex);
+            }
+        }
+    });
+    
     if (hideDetails) {
         // For opponent cards, show back or face down
         if (card.faceUp) {
@@ -786,6 +814,18 @@ function addFoundationEventListeners() {
                 moveWasteToFoundation(i);
             }
         });
+        
+        // Touch event (for mobile devices)
+        foundation.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            // If a card is selected, move it to foundation
+            if (gameState.selectedCard) {
+                moveCardToFoundation(i);
+            } else {
+                // Otherwise, try to move from waste
+                moveWasteToFoundation(i);
+            }
+        });
     }
 }
 
@@ -812,6 +852,12 @@ function addTableauEventListeners() {
         
         // Click event (for non-drag devices)
         tableauColumn.addEventListener('click', () => moveCardToTableau(col));
+        
+        // Touch event (for mobile devices)
+        tableauColumn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            moveCardToTableau(col);
+        });
     }
 }
 
