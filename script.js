@@ -54,7 +54,7 @@ const mirinteaDialogues = {
         "ほら、始めよ〜？{name}の反応見るの楽しみなんだけど♡",
         "スタートってドキドキしない？…あたしはするよ？ねぇ、してってば♡",
         "あたしが相手なんだよ？気抜いたら一瞬で置いてくからね？",
-        "今日のわたし…ちょっとだけ本気出す日なの。ちょっとだけね？♡",
+        "今日のわたし、ちょっとだけ本気出す日なの。ちょっとだけね？♡",
         "{name}ってさ、真剣な顔かわいくて好きだよ。ほら、もっと見せて？",
         "ねぇ{name}、今日はちゃんとみりんてゃの相手してよ？約束♡",
         "ふふっ…{name}、始めよ？みりんてゃ、もう指あっためて待ってたんだから〜♡",
@@ -224,6 +224,18 @@ const mirinteaDialogues = {
         "おっと？雲行き怪しい…やだ負けたくない…どーしよ{name}！！",
         "はいはい、次のターンいくよ〜〜！集中〜〜！",
         "この瞬間が一番好き…並んでゲームしてるのって恋じゃん"
+    ],
+    shuffle: [
+        "にゃっ…動かせるカードもうないみたい…",
+        "{name}、もう1回シャッフルしよっか…？",
+        "ふふっ…このままじゃ詰んじゃうね…",
+        "ねぇねぇ、カードを混ぜ直す？",
+        "あたしも手詰まりみたい…シャッフルしよっか？",
+        "うそでしょ…もう置けない…？",
+        "にゃ〜…もう一回最初からやり直そっか…",
+        "ふぇぇ…これ以上進められないよ…",
+        "ねぇ、カードを再配置する？",
+        "あたしも置く場所ないよ…もう一回？"
     ]
 };
 
@@ -331,11 +343,23 @@ function startGame() {
     addFoundationEventListeners();
     addTableauEventListeners();
     addStockEventListener(); // Add this line
-    showRandomDialogue('start');
     
-    // Start Mirintea's AI
-    setInterval(mirinteaAI, 5000); // Mirintea makes a move every 5 seconds
-    setInterval(showIdleDialogue, 20000); // Show idle dialogue every 20 seconds
+    // Start Mirintea's AI and shuffle check
+    setInterval(() => {
+        if (gameState.gameStarted && !gameState.gameOver) {
+            mirinteaAI();
+            shuffleWhenStuck(); // Check if shuffle is needed
+        }
+    }, 5000); // Mirintea makes a move and shuffle check every 5 seconds
+    
+    setInterval(() => {
+        if (gameState.gameStarted && !gameState.gameOver) {
+            showIdleDialogue();
+            shuffleWhenStuck(); // Check if shuffle is needed
+        }
+    }, 20000); // Show idle dialogue and shuffle check every 20 seconds
+    
+    showRandomDialogue('start');
 }
 
 // Reset the game
@@ -365,6 +389,25 @@ function resetGame() {
     initializeDeck();
     renderGame();
     showRandomDialogue('start');
+    
+    // Clear existing intervals
+    clearInterval(window.mirinteaAIInterval);
+    clearInterval(window.idleDialogueInterval);
+    
+    // Start new intervals
+    window.mirinteaAIInterval = setInterval(() => {
+        if (gameState.gameStarted && !gameState.gameOver) {
+            mirinteaAI();
+            shuffleWhenStuck(); // Check if shuffle is needed
+        }
+    }, 5000); // Mirintea makes a move and shuffle check every 5 seconds
+    
+    window.idleDialogueInterval = setInterval(() => {
+        if (gameState.gameStarted && !gameState.gameOver) {
+            showIdleDialogue();
+            shuffleWhenStuck(); // Check if shuffle is needed
+        }
+    }, 20000); // Show idle dialogue and shuffle check every 20 seconds
 }
 
 // Initialize a deck of cards
@@ -396,7 +439,7 @@ function initializeDeck() {
     // Shuffle the deck
     shuffleArray(deck);
     
-    // Deal cards to player tableau
+    // Deal cards to player tableau according to Klondike rules
     let cardIndex = 0;
     for (let col = 0; col < 7; col++) {
         for (let row = 0; row <= col; row++) {
@@ -417,7 +460,7 @@ function initializeDeck() {
     const mirinteaDeck = [...deck];
     shuffleArray(mirinteaDeck);
     
-    // Deal cards to Mirintea tableau
+    // Deal cards to Mirintea tableau according to Klondike rules
     cardIndex = 0;
     for (let col = 0; col < 7; col++) {
         for (let row = 0; row <= col; row++) {
@@ -442,33 +485,6 @@ function shuffleArray(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
-}
-
-// Deal cards to tableau
-function dealCards() {
-    // Deal player cards
-    for (let col = 0; col < 7; col++) {
-        for (let row = col; row < 7; row++) {
-            if (gameState.player.stock.length > 0) {
-                const card = gameState.player.stock.pop();
-                // First card in each column is face up
-                card.faceUp = (row === col);
-                gameState.player.tableau[row].push(card);
-            }
-        }
-    }
-    
-    // Deal Mirintea cards
-    for (let col = 0; col < 7; col++) {
-        for (let row = col; row < 7; row++) {
-            if (gameState.mirintea.stock.length > 0) {
-                const card = gameState.mirintea.stock.pop();
-                // First card in each column is face up
-                card.faceUp = (row === col);
-                gameState.mirintea.tableau[row].push(card);
-            }
-        }
-    }
 }
 
 // Render the game board
@@ -1104,4 +1120,204 @@ function updateMirinteaImage(imageName) {
 function showIdleDialogue() {
     if (!gameState.gameStarted || gameState.gameOver) return;
     showRandomDialogue('idle');
+}
+
+// Check if player can make any moves
+function canPlayerMove() {
+    // Check if player can move waste card to foundation
+    if (gameState.player.waste.length > 0) {
+        const card = gameState.player.waste[gameState.player.waste.length - 1];
+        for (let i = 0; i < 4; i++) {
+            if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+                return true;
+            }
+        }
+    }
+    
+    // Check if player can move tableau card to foundation
+    for (let col = 0; col < 7; col++) {
+        if (gameState.player.tableau[col].length > 0) {
+            const card = gameState.player.tableau[col][gameState.player.tableau[col].length - 1];
+            for (let i = 0; i < 4; i++) {
+                if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    // Check if player can move tableau card to another tableau column
+    for (let fromCol = 0; fromCol < 7; fromCol++) {
+        if (gameState.player.tableau[fromCol].length > 0) {
+            // Check all face-up cards in the column
+            for (let row = 0; row < gameState.player.tableau[fromCol].length; row++) {
+                if (gameState.player.tableau[fromCol][row].faceUp) {
+                    const card = gameState.player.tableau[fromCol][row];
+                    for (let toCol = 0; toCol < 7; toCol++) {
+                        if (fromCol !== toCol && canMoveToTableau(gameState.player.tableau[toCol], card)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Check if player can draw from stock
+    if (gameState.player.stock.length > 0) {
+        return true;
+    }
+    
+    // Check if player can reset stock from waste
+    if (gameState.player.waste.length > 0 && gameState.player.stock.length === 0) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Check if Mirintea can make any moves
+function canMirinteaMove() {
+    // Check if Mirintea can move waste card to foundation
+    if (gameState.mirintea.waste.length > 0) {
+        const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
+        for (let i = 0; i < 4; i++) {
+            if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
+                return true;
+            }
+        }
+    }
+    
+    // Check if Mirintea can move tableau card to foundation
+    for (let col = 0; col < 7; col++) {
+        if (gameState.mirintea.tableau[col].length > 0) {
+            const card = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
+            for (let i = 0; i < 4; i++) {
+                if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    // Check if Mirintea can move tableau card to another tableau column
+    for (let fromCol = 0; fromCol < 7; fromCol++) {
+        if (gameState.mirintea.tableau[fromCol].length > 0) {
+            // Check all face-up cards in the column
+            for (let row = 0; row < gameState.mirintea.tableau[fromCol].length; row++) {
+                if (gameState.mirintea.tableau[fromCol][row].faceUp) {
+                    const card = gameState.mirintea.tableau[fromCol][row];
+                    for (let toCol = 0; toCol < 7; toCol++) {
+                        if (fromCol !== toCol && canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Check if Mirintea can draw from stock
+    if (gameState.mirintea.stock.length > 0) {
+        return true;
+    }
+    
+    // Check if Mirintea can reset stock from waste
+    if (gameState.mirintea.waste.length > 0 && gameState.mirintea.stock.length === 0) {
+        return true;
+    }
+    
+    return false;
+}
+
+// Shuffle tableau and stock when both players are stuck
+function shuffleWhenStuck() {
+    // Check if both players can move
+    const playerCanMove = canPlayerMove();
+    const mirinteaCanMove = canMirinteaMove();
+    
+    // If neither player can move, shuffle the tableau and stock
+    if (!playerCanMove && !mirinteaCanMove) {
+        console.log("Both players are stuck. Shuffling tableau and stock...");
+        
+        // Collect all cards from tableau and stock (but not foundations)
+        const allCards = [];
+        
+        // Collect player cards
+        for (let col = 0; col < 7; col++) {
+            allCards.push(...gameState.player.tableau[col]);
+            gameState.player.tableau[col] = [];
+        }
+        
+        // Collect player stock and waste
+        allCards.push(...gameState.player.stock);
+        allCards.push(...gameState.player.waste);
+        gameState.player.stock = [];
+        gameState.player.waste = [];
+        
+        // Collect Mirintea cards
+        for (let col = 0; col < 7; col++) {
+            allCards.push(...gameState.mirintea.tableau[col]);
+            gameState.mirintea.tableau[col] = [];
+        }
+        
+        // Collect Mirintea stock and waste
+        allCards.push(...gameState.mirintea.stock);
+        allCards.push(...gameState.mirintea.waste);
+        gameState.mirintea.stock = [];
+        gameState.mirintea.waste = [];
+        
+        // Shuffle all collected cards
+        shuffleArray(allCards);
+        
+        // Redistribute cards according to Klondike rules
+        let cardIndex = 0;
+        
+        // Redistribute player tableau
+        for (let col = 0; col < 7; col++) {
+            for (let row = 0; row <= col; row++) {
+                if (cardIndex < allCards.length) {
+                    const card = allCards[cardIndex];
+                    // Only the last card in each column is face up
+                    card.faceUp = (row === col);
+                    gameState.player.tableau[col].push(card);
+                    cardIndex++;
+                }
+            }
+        }
+        
+        // Remaining cards go to player stock
+        for (let i = cardIndex; i < allCards.length; i++) {
+            gameState.player.stock.push(allCards[i]);
+        }
+        
+        // For Mirintea, we'll use the same cards but shuffle them differently
+        const mirinteaCards = [...allCards];
+        shuffleArray(mirinteaCards);
+        
+        // Redistribute Mirintea tableau
+        cardIndex = 0;
+        for (let col = 0; col < 7; col++) {
+            for (let row = 0; row <= col; row++) {
+                if (cardIndex < mirinteaCards.length) {
+                    const card = mirinteaCards[cardIndex];
+                    // Only the last card in each column is face up
+                    card.faceUp = (row === col);
+                    gameState.mirintea.tableau[col].push(card);
+                    cardIndex++;
+                }
+            }
+        }
+        
+        // Remaining cards go to Mirintea stock
+        for (let i = cardIndex; i < mirinteaCards.length; i++) {
+            gameState.mirintea.stock.push(mirinteaCards[i]);
+        }
+        
+        // Show shuffle dialogue
+        showRandomDialogue('shuffle');
+        
+        // Re-render game
+        renderGame();
+    }
 }
