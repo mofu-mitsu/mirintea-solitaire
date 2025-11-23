@@ -27,6 +27,10 @@ body {
     align-items: center;
 }
 
+.modal.hidden {
+    display: none;
+}
+
 .modal-content {
     background: white;
     padding: 30px;
@@ -60,9 +64,84 @@ body {
     font-size: 16px;
     cursor: pointer;
     transition: background 0.3s;
+    margin-bottom: 10px;
+    width: 100%;
 }
 
 #startButton:hover {
+    background: #ff3399;
+}
+
+.rules-button {
+    background: #66ccff;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+    width: 100%;
+}
+
+.rules-button:hover {
+    background: #3399cc;
+}
+
+/* Rules Modal */
+.rules-modal {
+    max-width: 600px;
+    text-align: left;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.rules-modal h2 {
+    text-align: center;
+}
+
+.rules-modal h3 {
+    color: #ff66b2;
+    margin: 15px 0 10px;
+}
+
+.rules-modal ul {
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.rules-modal li {
+    margin-bottom: 8px;
+}
+
+.rules-modal p {
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+#closeRulesBtn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #ff66b2;
+}
+
+#closeRulesButton {
+    background: #ff66b2;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+    width: 100%;
+    margin-top: 15px;
+}
+
+#closeRulesButton:hover {
     background: #ff3399;
 }
 
@@ -151,14 +230,10 @@ body {
     border: 1px solid #333;
     border-radius: 6px;
     position: absolute;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 18px;
-    font-weight: bold;
     cursor: pointer;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s, box-shadow 0.2s;
+    background-size: cover;
 }
 
 .card:hover {
@@ -167,16 +242,16 @@ body {
 }
 
 .card.red {
-    color: #d32f2f;
+    /* color: #d32f2f; */
 }
 
 .card.black {
-    color: #333;
+    /* color: #333; */
 }
 
 .card.back {
     background: linear-gradient(135deg, #ff66b2, #9c27b0);
-    background-image: url('cards/back.png');  /* 先頭に / 追加でルート指定！ */
+    background-image: url('/cards/back.png');
     background-size: cover;
 }
 
