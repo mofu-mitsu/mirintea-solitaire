@@ -680,11 +680,17 @@ function drawFromStock() {
 // Select a card
 function selectCard(player, col, row) {
     console.log('Selecting card:', player, col, row);
+    console.log('Tableau column:', gameState.player.tableau[col]);
+    
     if (player !== 'player') return;
     
     const card = gameState.player.tableau[col][row];
     console.log('Selected card:', card);
-    if (!card.faceUp) return;
+    
+    if (!card.faceUp) {
+        console.log('Card is not face up');
+        return;
+    }
     
     gameState.selectedCard = { player, col, row };
     console.log('Set selected card:', gameState.selectedCard);
@@ -706,6 +712,9 @@ function highlightSelectedCard(player, col, row) {
 // Move selected card to foundation
 function moveCardToFoundation(foundationIndex) {
     console.log('Moving card to foundation:', foundationIndex);
+    console.log('Selected card:', gameState.selectedCard);
+    console.log('Player foundations:', gameState.player.foundations);
+    
     if (!gameState.selectedCard) {
         console.log('No card selected');
         return;
@@ -717,6 +726,7 @@ function moveCardToFoundation(foundationIndex) {
     // Can only move the last card in a column to foundation
     if (row !== gameState.player.tableau[col].length - 1) {
         console.log('Can only move the last card in a column to foundation');
+        console.log('Row:', row, 'Column length:', gameState.player.tableau[col].length);
         return;
     }
     
@@ -724,7 +734,10 @@ function moveCardToFoundation(foundationIndex) {
     console.log('Moving card:', card);
     
     // Check if card can be moved to foundation
-    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
+    const canMove = canMoveToFoundation(gameState.player.foundations[foundationIndex], card);
+    console.log('Can move to foundation:', canMove);
+    
+    if (canMove) {
         console.log('Card can be moved to foundation');
         // Remove card from tableau
         gameState.player.tableau[col].pop();
@@ -745,6 +758,8 @@ function moveCardToFoundation(foundationIndex) {
         }
     } else {
         console.log('Card cannot be moved to foundation');
+        console.log('Foundation:', gameState.player.foundations[foundationIndex]);
+        console.log('Card:', card);
     }
 }
 
@@ -990,18 +1005,37 @@ function calculateProgress(player) {
 
 // Check if a card can be moved to a foundation
 function canMoveToFoundation(foundation, card) {
+    console.log('Checking if card can be moved to foundation');
+    console.log('Foundation:', foundation);
+    console.log('Card:', card);
+    
     if (foundation.length === 0) {
-        return card.rank === 'A';
+        const result = card.rank === 'A';
+        console.log('Foundation is empty, card must be A:', result);
+        return result;
     }
     
     const topCard = foundation[foundation.length - 1];
-    return topCard.suit === card.suit && getNextRank(topCard.rank) === card.rank;
+    console.log('Top card:', topCard);
+    
+    const suitMatch = topCard.suit === card.suit;
+    const rankMatch = getNextRank(topCard.rank) === card.rank;
+    const result = suitMatch && rankMatch;
+    
+    console.log('Suit match:', suitMatch);
+    console.log('Rank match:', rankMatch);
+    console.log('Can move to foundation:', result);
+    
+    return result;
 }
 
 // Get next rank in sequence
 function getNextRank(rank) {
+    console.log('Getting next rank for:', rank);
     const index = RANKS.indexOf(rank);
-    return index < RANKS.length - 1 ? RANKS[index + 1] : null;
+    const result = index < RANKS.length - 1 ? RANKS[index + 1] : null;
+    console.log('Next rank:', result);
+    return result;
 }
 
 // Move card from waste to foundation
