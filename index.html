@@ -1,9 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mirintea Solitaire</title>
+    <meta name="description" content="みりんてゃと対戦するダブルソリティアゲーム。クラシックなKlondikeソリティアをAIキャラクターみりんてゃと対戦できます。">
+    <meta name="keywords" content="ソリティア, カードゲーム, みりんてゃ, 対戦ゲーム, Klondike, ソロゲーム">
+    <meta name="author" content="みつき">
+    <meta property="og:title" content="みりんてゃソリティア - AIキャラクターと対戦するソリティアゲーム">
+    <meta property="og:description" content="みりんてゃと対戦するダブルソリティアゲーム。クラシックなKlondikeソリティアをAIキャラクターみりんてゃと対戦できます。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mirintea-solitaire.vercel.app/">
+    <meta property="og:image" content="https://mirintea-solitaire.vercel.app/mirintea/default.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="みりんてゃソリティア - AIキャラクターと対戦するソリティアゲーム">
+    <meta name="twitter:description" content="みりんてゃと対戦するダブルソリティアゲーム。クラシックなKlondikeソリティアをAIキャラクターみりんてゃと対戦できます。">
+    <meta name="twitter:image" content="https://mirintea-solitaire.vercel.app/mirintea/default.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>みりんてゃソリティア - AIキャラクターと対戦するソリティアゲーム</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -45,7 +61,14 @@
                     <li>カードをクリックして選択し、移動先をクリックして移動します</li>
                     <li>ドラッグアンドドロップでもカードを移動できます</li>
                     <li>山札をクリックしてカードをめくります</li>
+                    <li>スマートフォンやタブレットでは、カードをタップして選択し、移動先をタップして移動します</li>
                 </ul>
+                
+                <h3>対戦モード</h3>
+                <p>画面右側にみりんてゃも同じようにプレイしています。どちらかが先に4つの.foundation pilesを完成させたら勝利です！</p>
+                
+                <h3>自動シャッフル機能</h3>
+                <p>プレイヤーとみりんてゃの両方が手が止まった場合、自動的に場札と山札をシャッフルして再配置されます。組札はシャッフルされません。</p>
             </div>
             <button id="closeRulesButton">閉じる</button>
         </div>
