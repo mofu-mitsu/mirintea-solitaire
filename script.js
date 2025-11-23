@@ -1,7 +1,7 @@
 // Game constants
-// Game constants
 const SUITS = ['hearts', 'diamonds', 'clubs', 'spades'];
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];\nconst RANK_MAP = {'A': 'ace', 'J': 'jack', 'Q': 'queen', 'K': 'king'};
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const RANK_MAP = {'A': 'ace', 'J': 'jack', 'Q': 'queen', 'K': 'king'};
 const COLORS = {
     hearts: 'red',
     diamonds: 'red',
@@ -9,7 +9,14 @@ const COLORS = {
     spades: 'black'
 };
 
-// Game state\n\n// Helper function to get the correct card file name\nfunction getCardFileName(card) {\n    const rank = RANK_MAP[card.rank] || card.rank.toLowerCase();\n    const suit = card.suit.toLowerCase();\n    return `${rank}_of_${suit}`;\n}
+// Helper function to get the correct card file name
+function getCardFileName(card) {
+    const rank = RANK_MAP[card.rank] || card.rank.toLowerCase();
+    const suit = card.suit.toLowerCase();
+    return `${rank}_of_${suit}`;
+}
+
+// Game state
 let gameState = {
     player: {
         stock: [],
@@ -61,7 +68,7 @@ const mirinteaDialogues = {
         "ふふっ…{name}、みりんてゃに勝てるかなぁ？始めよっ♡",
         "はいっ、スタート♡ {name}の弱点、今日も全部見るからね？",
         "集中して？みりんてゃのターン、見逃したらゆるさない♡",
-        "ねぇ、負ける準備できた？あたしは勝つ準備できてるよ♡",
+        "ねぇ、負ける準備できた？あたしは勝つ準備できてるよ♡"
     ],
     winning: [
         "{name}〜？進んでる？あたしもう3列片付いたけど？",
@@ -91,7 +98,7 @@ const mirinteaDialogues = {
         "え、そこ置くの？まじ？ふふ…勝つ気ある？♡",
         "みりんてゃに勝てるとか、本気で思ってた？かわいすぎ♡",
         "{name}の焦った顔…好きだよ？もっと見せて♡",
-        "なんかごめんね？強すぎて♡（ぜんぜん謝ってない）",
+        "なんかごめんね？強すぎて♡（ぜんぜん謝ってない）"
     ],
     losing: [
         "ちょ…ちょっと待って！？なんでそんな速いの？？？",
@@ -122,7 +129,7 @@ const mirinteaDialogues = {
         "名前呼んで励ましてよ〜〜っ{name}ぇ…みりんてゃ動揺して手滑る…",
         "ちょっとだけでいいから手加減しよ？ね？ね？（上目遣い）",
         "そんなに強いと…嫌いになるよ…嘘、嫌いになれないけど…くすん",
-        "あ〜〜〜！！なんでそこにそのカードくんの！？泣くよ！？",
+        "あ〜〜〜！！なんでそこにそのカードくんの！？泣くよ！？"
     ],
     tsundere: [
         "べ、別に負けそうとかじゃないし！？焦ってないし！！",
@@ -210,60 +217,22 @@ const mirinteaDialogues = {
         "{name}が真剣にすると…なんかちょっと嫉妬するんだけど",
         "負けたくないのに…勝ちたいのに…好きなのに…なんなの〜〜！！",
         "ん？落ち込んでる？ギューしてあげよっか？",
-        "ねぇ{name}？なんでそっち見てるの？こっちでしょ♡",
-        "無視すると泣くよ？ほんとに泣くよ？",
-        "みりんてゃの手、今の可愛くなかった…？ほめてよぉ♡",
-        "かまって{name}……今すぐ……ほら……",
-        "ねぇ、好きって言って？集中できないの{name}のせいだよ？",
-        "{name}が見てくれないと、みりんてゃ弱くなる…責任とって♡",
-        "よし……！このターン、もらった♡",
-        "あっ、これ来てる来てる…流れ来てる♡",
-        "やだ…嫌なカード来た…{name}助けて……",
-        "見ててね？今から天才するから♡",
-        "やばい……手が震えてる……これ恋？違う？ゲーム？どっち！？",
-        "この勝負、絶対勝ちにいくから…覚悟してね{name}♡",
-        "{name}〜〜〜みりんてゃのこと見て？ほらほらほら！！",
-        "ちょっと集中しないで！？あたし見て！？",
-        "ねぇ手元見すぎ。顔見て？ねぇ？見て？♡",
-        "進める前にさ、褒めて？一回褒めて？やる気出るからっ♡",
-        "かまってくれないと負けるよ？責任取って？♡",
-        "{name}が真剣な顔してると…なんか嫉妬するんだけど…なんで？",
-        "カードよりあたし見てよ〜〜！！！",
-        "負けそうなのに…かまってくれないのひどい……構って……？",
-        "んも〜〜！！無視されたらめっちゃ煽るからね！？",
-        "カードめくる音かわい〜…{name}の指もかわい〜♡",
-        "この並び好き…美しすぎてスクショしたい…",
-        "ねぇ、今の動きかっこよかった…もう一回やって？♡",
-        "カード置く瞬間の{nname}の横顔が好き。",
-        "進んでる音だけでテンション上がるの、あたしだけ？",
-        "{name}とゲームしてる瞬間がいちばん好きかも…内緒だけど♡",
-        "この緊張感…付き合ってるみたいじゃない？……違う？えっ違う？",
         "うわ、今の配置めっちゃ可愛い…スクショしたい",
-        "ねぇ{name}？無視してない？ねぇってば〜〜〜〜♡",
-        "集中してるのは分かるけど、みりんてゃのことも見て？ね？",
-        "なんでそっちだけ見てるの…こっちのが可愛いのに…ぷくっ",
-        "チラッ（見てほしいのポーズ）…ねぇ気づけよ{name}♡",
-        "頑張ってるみりんてゃにチューの音でもくれたら伸びるんだけど？♡",
-        "ねぇねぇねぇ♡今の手どうだった？ほめてよ〜",
-        "寂しい……やだ……もっと構って{name}……",
-        "{name}の手って継麗…カード持ってる指が好き",
-        "カードシャッ…はいっ♡みりんてゃのターンっ！",
-        "おっと〜？これはいい流れ来てる気しかしない〜〜♡",
-        "あ…ちょっと待って…あ、この手わかんなくなってきた…助けて{name}…",
-        "えへへ…見ててね？今の配置は天才ムーブだから♡",
-        "ん〜〜！！このカードだけ邪魔っ！！どいてぇぇ（ばたばた）",
-        "みりんてゃ、絶対勝つ流れできてる…これ勝ったら褒めてね？♡",
+        "{name}の手って綺麗…カード持ってる指が好き",
         "おっと？雲行き怪しい…やだ負けたくない…どーしよ{name}！！",
         "はいはい、次のターンいくよ〜〜！集中〜〜！",
         "この瞬間が一番好き…並んでゲームしてるのって恋じゃん"
     ]
 };
 
-
 // DOM Elements
 const nameModal = document.getElementById('nameModal');
 const playerNameInput = document.getElementById('playerName');
 const startButton = document.getElementById('startButton');
+const rulesButton = document.getElementById('rulesButton');
+const rulesModal = document.getElementById('rulesModal');
+const closeRulesBtn = document.getElementById('closeRulesBtn');
+const closeRulesButton = document.getElementById('closeRulesButton');
 const playerNameDisplay = document.getElementById('playerNameDisplay');
 const mirinteaDialogue = document.getElementById('mirinteaDialogue');
 const gameOverlay = document.getElementById('gameOverlay');
@@ -288,6 +257,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Event listeners
     startButton.addEventListener('click', startGame);
+    rulesButton.addEventListener('click', () => {
+        nameModal.style.display = 'none';
+        rulesModal.classList.remove('hidden');
+    });
+    closeRulesBtn.addEventListener('click', () => {
+        rulesModal.classList.add('hidden');
+        nameModal.style.display = 'flex';
+    });
+    closeRulesButton.addEventListener('click', () => {
+        rulesModal.classList.add('hidden');
+        nameModal.style.display = 'flex';
+    });
     restartButton.addEventListener('click', resetGame);
     closeBtn.addEventListener('click', () => {
         mirinteaWindow.style.display = 'none';
@@ -340,6 +321,7 @@ function startGame() {
     localStorage.setItem('solitairePlayerName', name);
     
     nameModal.style.display = 'none';
+    rulesModal.classList.add('hidden');
     gameState.gameStarted = true;
     
     initializeDeck();
@@ -348,8 +330,8 @@ function startGame() {
     showRandomDialogue('start');
     
     // Start Mirintea's AI
-    setInterval(mirinteaAI, 2000); // Mirintea makes a move every 2 seconds
-    setInterval(showIdleDialogue, 10000); // Show idle dialogue every 10 seconds
+    setInterval(mirinteaAI, 5000); // Mirintea makes a move every 5 seconds
+    setInterval(showIdleDialogue, 20000); // Show idle dialogue every 20 seconds
 }
 
 // Reset the game
@@ -554,7 +536,7 @@ function createCardElement(card, hideDetails = false) {
         if (card.faceUp) {
             cardElement.classList.add('face-up');
             // Use card image
-            cardElement.style.backgroundImage = `url('cards/${getCardFileName(card)}.png')`;
+            cardElement.style.backgroundImage = `url('/cards/${getCardFileName(card)}.png')`;
             cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
@@ -564,7 +546,7 @@ function createCardElement(card, hideDetails = false) {
         if (card.faceUp) {
             cardElement.classList.add('face-up');
             // Use card image
-            cardElement.style.backgroundImage = `url('cards/${getCardFileName(card)}.png')`;
+            cardElement.style.backgroundImage = `url('/cards/${getCardFileName(card)}.png')`;
             cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
@@ -737,10 +719,10 @@ function showGameOver(playerWon) {
     
     if (playerWon) {
         resultText.textContent = getRandomDialogue('win');
-        resultImage.src = 'mirintea/win.png';
+        resultImage.src = '/mirintea/win.png';
     } else {
         resultText.textContent = getRandomDialogue('lose');
-        resultImage.src = 'mirintea/lose.png';
+        resultImage.src = '/mirintea/lose.png';
     }
     
     gameOverlay.classList.remove('hidden');
