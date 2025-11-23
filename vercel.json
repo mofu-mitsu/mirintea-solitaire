@@ -12,9 +12,25 @@
     {
       "src": "*.js",
       "use": "@vercel/static"
+    },
+    {
+      "src": "cards/**",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "mirintea/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/cards/(.*)",
+      "dest": "/cards/$1"
+    },
+    {
+      "src": "/mirintea/(.*)",
+      "dest": "/mirintea/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/$1"
