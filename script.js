@@ -327,7 +327,6 @@ function startGame() {
     gameState.gameStarted = true;
     
     initializeDeck();
-    dealCards();
     renderGame();
     addFoundationEventListeners();
     addTableauEventListeners();
@@ -364,36 +363,85 @@ function resetGame() {
     
     gameOverlay.classList.add('hidden');
     initializeDeck();
-    dealCards();
     renderGame();
     showRandomDialogue('start');
 }
 
 // Initialize a deck of cards
 function initializeDeck() {
-    // Create player deck
-    let playerDeck = [];
-    for (let suit of SUITS) {
-        for (let rank of RANKS) {
-            playerDeck.push({ suit, rank, color: COLORS[suit] });
+    // Reset game state
+    gameState.player.stock = [];
+    gameState.player.waste = [];
+    gameState.player.foundations = [[], [], [], []];
+    gameState.player.tableau = [[], [], [], [], [], [], []];
+    gameState.mirintea.stock = [];
+    gameState.mirintea.waste = [];
+    gameState.mirintea.foundations = [[], [], [], []];
+    gameState.mirintea.tableau = [[], [], [], [], [], [], []];
+    gameState.selectedCard = null;
+    
+    // Create a full deck of 52 cards
+    const deck = [];
+    for (const suit of SUITS) {
+        for (const rank of RANKS) {
+            deck.push({
+                suit: suit,
+                rank: rank,
+                color: COLORS[suit],
+                faceUp: false
+            });
         }
     }
     
     // Shuffle the deck
-    playerDeck = shuffleDeck(playerDeck);
+    shuffleArray(deck);
     
-    // Split deck between player and Mirintea
-    gameState.player.stock = playerDeck.slice(0, 26);
-    gameState.mirintea.stock = playerDeck.slice(26, 52);
+    // Deal cards to player tableau
+    let cardIndex = 0;
+    for (let col = 0; col < 7; col++) {
+        for (let row = 0; row <= col; row++) {
+            const card = deck[cardIndex];
+            // Only the last card in each column is face up
+            card.faceUp = (row === col);
+            gameState.player.tableau[col].push(card);
+            cardIndex++;
+        }
+    }
+    
+    // Remaining cards go to player stock
+    for (let i = cardIndex; i < deck.length; i++) {
+        gameState.player.stock.push(deck[i]);
+    }
+    
+    // For Mirintea, we'll use the same deck but shuffle it differently
+    const mirinteaDeck = [...deck];
+    shuffleArray(mirinteaDeck);
+    
+    // Deal cards to Mirintea tableau
+    cardIndex = 0;
+    for (let col = 0; col < 7; col++) {
+        for (let row = 0; row <= col; row++) {
+            const card = mirinteaDeck[cardIndex];
+            // Only the last card in each column is face up
+            card.faceUp = (row === col);
+            gameState.mirintea.tableau[col].push(card);
+            cardIndex++;
+        }
+    }
+    
+    // Remaining cards go to Mirintea stock
+    for (let i = cardIndex; i < mirinteaDeck.length; i++) {
+        gameState.mirintea.stock.push(mirinteaDeck[i]);
+    }
 }
 
 // Shuffle a deck of cards
-function shuffleDeck(deck) {
-    for (let i = deck.length - 1; i > 0; i--) {
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [deck[i], deck[j]] = [deck[j], deck[i]];
+        [array[i], array[j]] = [array[j], array[i]];
     }
-    return deck;
+    return array;
 }
 
 // Deal cards to tableau
@@ -622,6 +670,12 @@ function moveCardToFoundation(foundationIndex) {
     const { player, col, row } = gameState.selectedCard;
     if (player !== 'player') return;
     
+    // Can only move the last card in a column to foundation
+    if (row !== gameState.player.tableau[col].length - 1) {
+        console.log('Can only move the last card in a column to foundation');
+        return;
+    }
+    
     const card = gameState.player.tableau[col][row];
     console.log('Moving card:', card);
     
@@ -629,7 +683,11 @@ function moveCardToFoundation(foundationIndex) {
     if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
         console.log('Card can be moved to foundation');
         // Remove card from tableau
-        gameState.player.tableau[col].splice(row, 1);
+        gameState.player.tableau[col].pop();
+        // Flip the new top card if it's face down
+        if (gameState.player.tableau[col].length > 0 && !gameState.player.tableau[col][gameState.player.tableau[col].length - 1].faceUp) {
+            gameState.player.tableau[col][gameState.player.tableau[col].length - 1].faceUp = true;
+        }
         // Add card to foundation
         gameState.player.foundations[foundationIndex].push(card);
         // Clear selection
@@ -665,10 +723,14 @@ function moveCardToTableau(targetCol) {
     const targetColumn = gameState.player.tableau[targetCol];
     if (canMoveToTableau(targetColumn, card)) {
         console.log('Card can be moved to tableau column');
-        // Remove card from current position
+        // Remove cards from current position
         const cardsToMove = gameState.player.tableau[col].splice(row);
         // Add cards to target column
         gameState.player.tableau[targetCol].push(...cardsToMove);
+        // Flip the new top card if it's face down
+        if (gameState.player.tableau[col].length > 0 && !gameState.player.tableau[col][gameState.player.tableau[col].length - 1].faceUp) {
+            gameState.player.tableau[col][gameState.player.tableau[col].length - 1].faceUp = true;
+        }
         // Clear selection
         gameState.selectedCard = null;
         // Re-render game
@@ -760,13 +822,12 @@ function mirinteaAI() {
     }
     
     // Try to make a move
-    // This is a simplified AI - in a real implementation, you'd have more complex logic
     let moved = false;
     
-    // Try to move cards to foundations
-    for (let i = 0; i < 4; i++) {
-        if (gameState.mirintea.waste.length > 0) {
-            const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
+    // Try to move cards from waste to foundations
+    if (gameState.mirintea.waste.length > 0) {
+        const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
+        for (let i = 0; i < 4; i++) {
             if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
                 const movedCard = gameState.mirintea.waste.pop();
                 gameState.mirintea.foundations[i].push(movedCard);
@@ -776,9 +837,52 @@ function mirinteaAI() {
         }
     }
     
-    // If no foundation move, try tableau moves
+    // Try to move cards from tableau to foundations
     if (!moved) {
-        // Simplified: just flip a hidden card if possible
+        for (let col = 0; col < 7; col++) {
+            if (gameState.mirintea.tableau[col].length > 0) {
+                const card = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
+                for (let i = 0; i < 4; i++) {
+                    if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
+                        const movedCard = gameState.mirintea.tableau[col].pop();
+                        gameState.mirintea.foundations[i].push(movedCard);
+                        // Flip the new top card if it's face down
+                        if (gameState.mirintea.tableau[col].length > 0 && !gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp) {
+                            gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp = true;
+                        }
+                        moved = true;
+                        break;
+                    }
+                }
+                if (moved) break;
+            }
+        }
+    }
+    
+    // Try to move cards between tableau columns
+    if (!moved) {
+        for (let fromCol = 0; fromCol < 7; fromCol++) {
+            if (gameState.mirintea.tableau[fromCol].length > 0) {
+                const card = gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1];
+                for (let toCol = 0; toCol < 7; toCol++) {
+                    if (fromCol !== toCol && canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
+                        const movedCard = gameState.mirintea.tableau[fromCol].pop();
+                        gameState.mirintea.tableau[toCol].push(movedCard);
+                        // Flip the new top card if it's face down
+                        if (gameState.mirintea.tableau[fromCol].length > 0 && !gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp) {
+                            gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp = true;
+                        }
+                        moved = true;
+                        break;
+                    }
+                }
+                if (moved) break;
+            }
+        }
+    }
+    
+    // If no move was made, try to flip a hidden card
+    if (!moved) {
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
             if (pile.length > 0) {
@@ -879,7 +983,13 @@ function canMoveToTableau(column, card) {
     const topCard = column[column.length - 1];
     
     // Card must be opposite color and one rank lower
-    return topCard.color !== card.color && getNextRank(card.rank) === topCard.rank;
+    return topCard.color !== card.color && getPreviousRank(topCard.rank) === card.rank;
+}
+
+// Get previous rank in sequence
+function getPreviousRank(rank) {
+    const index = RANKS.indexOf(rank);
+    return index > 0 ? RANKS[index - 1] : null;
 }
 
 // Update the renderTableau function to add click and drag events to cards
