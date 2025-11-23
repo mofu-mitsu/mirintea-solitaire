@@ -423,27 +423,19 @@ function initializeDeck() {
     gameState.mirintea.tableau = [[], [], [], [], [], [], []];
     gameState.selectedCard = null;
     
-    // Create a full deck of 52 cards
-    const deck = [];
-    for (const suit of SUITS) {
-        for (const rank of RANKS) {
-            deck.push({
-                suit: suit,
-                rank: rank,
-                color: COLORS[suit],
-                faceUp: false
-            });
-        }
-    }
+    // Create separate decks for player and Mirintea
+    const playerDeck = createNewDeck();
+    const mirinteaDeck = createNewDeck();
     
-    // Shuffle the deck
-    shuffleArray(deck);
+    // Shuffle the decks
+    shuffleArray(playerDeck);
+    shuffleArray(mirinteaDeck);
     
     // Deal cards to player tableau according to Klondike rules
     let cardIndex = 0;
     for (let col = 0; col < 7; col++) {
         for (let row = 0; row <= col; row++) {
-            const card = deck[cardIndex];
+            const card = playerDeck[cardIndex];
             // Only the last card in each column is face up
             card.faceUp = (row === col);
             gameState.player.tableau[col].push(card);
@@ -452,13 +444,9 @@ function initializeDeck() {
     }
     
     // Remaining cards go to player stock
-    for (let i = cardIndex; i < deck.length; i++) {
-        gameState.player.stock.push(deck[i]);
+    for (let i = cardIndex; i < playerDeck.length; i++) {
+        gameState.player.stock.push(playerDeck[i]);
     }
-    
-    // For Mirintea, we'll use the same deck but shuffle it differently
-    const mirinteaDeck = [...deck];
-    shuffleArray(mirinteaDeck);
     
     // Deal cards to Mirintea tableau according to Klondike rules
     cardIndex = 0;
@@ -476,6 +464,22 @@ function initializeDeck() {
     for (let i = cardIndex; i < mirinteaDeck.length; i++) {
         gameState.mirintea.stock.push(mirinteaDeck[i]);
     }
+}
+
+// Create a new deck of cards
+function createNewDeck() {
+    const deck = [];
+    for (const suit of SUITS) {
+        for (const rank of RANKS) {
+            deck.push({
+                suit: suit,
+                rank: rank,
+                color: COLORS[suit],
+                faceUp: false
+            });
+        }
+    }
+    return deck;
 }
 
 // Shuffle a deck of cards
@@ -679,21 +683,15 @@ function drawFromStock() {
 
 // Select a card
 function selectCard(player, col, row) {
-    console.log('Selecting card:', player, col, row);
-    console.log('Tableau column:', gameState.player.tableau[col]);
-    
     if (player !== 'player') return;
     
     const card = gameState.player.tableau[col][row];
-    console.log('Selected card:', card);
     
     if (!card.faceUp) {
-        console.log('Card is not face up');
         return;
     }
     
     gameState.selectedCard = { player, col, row };
-    console.log('Set selected card:', gameState.selectedCard);
     
     // Highlight selected card
     renderGame();
@@ -711,12 +709,7 @@ function highlightSelectedCard(player, col, row) {
 
 // Move selected card to foundation
 function moveCardToFoundation(foundationIndex) {
-    console.log('Moving card to foundation:', foundationIndex);
-    console.log('Selected card:', gameState.selectedCard);
-    console.log('Player foundations:', gameState.player.foundations);
-    
     if (!gameState.selectedCard) {
-        console.log('No card selected');
         return;
     }
     
@@ -725,20 +718,13 @@ function moveCardToFoundation(foundationIndex) {
     
     // Can only move the last card in a column to foundation
     if (row !== gameState.player.tableau[col].length - 1) {
-        console.log('Can only move the last card in a column to foundation');
-        console.log('Row:', row, 'Column length:', gameState.player.tableau[col].length);
         return;
     }
     
     const card = gameState.player.tableau[col][row];
-    console.log('Moving card:', card);
     
     // Check if card can be moved to foundation
-    const canMove = canMoveToFoundation(gameState.player.foundations[foundationIndex], card);
-    console.log('Can move to foundation:', canMove);
-    
-    if (canMove) {
-        console.log('Card can be moved to foundation');
+    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
         // Remove card from tableau
         gameState.player.tableau[col].pop();
         // Flip the new top card if it's face down
@@ -756,10 +742,6 @@ function moveCardToFoundation(foundationIndex) {
         if (checkWinCondition('player')) {
             showGameOver(true);
         }
-    } else {
-        console.log('Card cannot be moved to foundation');
-        console.log('Foundation:', gameState.player.foundations[foundationIndex]);
-        console.log('Card:', card);
     }
 }
 
@@ -1005,37 +987,23 @@ function calculateProgress(player) {
 
 // Check if a card can be moved to a foundation
 function canMoveToFoundation(foundation, card) {
-    console.log('Checking if card can be moved to foundation');
-    console.log('Foundation:', foundation);
-    console.log('Card:', card);
-    
     if (foundation.length === 0) {
-        const result = card.rank === 'A';
-        console.log('Foundation is empty, card must be A:', result);
-        return result;
+        return card.rank === 'A';
     }
     
     const topCard = foundation[foundation.length - 1];
-    console.log('Top card:', topCard);
     
     const suitMatch = topCard.suit === card.suit;
     const rankMatch = getNextRank(topCard.rank) === card.rank;
     const result = suitMatch && rankMatch;
-    
-    console.log('Suit match:', suitMatch);
-    console.log('Rank match:', rankMatch);
-    console.log('Can move to foundation:', result);
     
     return result;
 }
 
 // Get next rank in sequence
 function getNextRank(rank) {
-    console.log('Getting next rank for:', rank);
     const index = RANKS.indexOf(rank);
-    const result = index < RANKS.length - 1 ? RANKS[index + 1] : null;
-    console.log('Next rank:', result);
-    return result;
+    return index < RANKS.length - 1 ? RANKS[index + 1] : null;
 }
 
 // Move card from waste to foundation
