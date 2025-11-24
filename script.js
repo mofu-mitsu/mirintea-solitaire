@@ -582,67 +582,95 @@ function createCardElement(card, hideDetails = false, source = null) {
     const cardElement = document.createElement('div');
     cardElement.className = `card ${card.color}`;
     
-    // カードの元場所情報をセット
     if (source) {
         cardElement.dataset.source = JSON.stringify(source);
     }
     
-    // --- プレイヤー側のカード処理 ---
     if (!hideDetails && card.faceUp) {
         cardElement.draggable = true;
         
-        // 【重要】PCドラッグ開始
+        // --- PC Drag ---
         cardElement.addEventListener('dragstart', (e) => {
             e.stopPropagation();
             const dragData = { card: card, source: source };
             e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
             e.dataTransfer.effectAllowed = 'move';
+            // 選択状態にする（見た目更新のみ）
+            if (source.type === 'tableau') {
+                gameState.selectedCard = { player: 'player', col: source.col, row: source.row, isMulti: false };
+                // 束判定
+                 if (source.row < gameState.player.tableau[source.col].length - 1) {
+                    gameState.selectedCard.isMulti = true;
+                }
+                updateSelectionVisuals();
+            }
         });
 
-        // ★修正：カードの上でも「ドロップOK」にする（これで禁止マーク消える！）
         cardElement.addEventListener('dragover', (e) => {
-            e.preventDefault(); // これがないとドロップできない
+            e.preventDefault();
             e.stopPropagation();
             e.dataTransfer.dropEffect = 'move';
         });
 
-        // ★修正：カードの上にドロップされたら、その「列」に置いたことにする
+        // ★修正：ドロップ処理（組札対応）
         cardElement.addEventListener('drop', (e) => {
             e.preventDefault();
-            e.stopPropagation(); // 親（列）のイベントと重複しないように止める
+            e.stopPropagation();
             
-            // もし場札（Tableau）のカードなら、その列番号を取得して処理を流す
+            // A. 組札（Foundation）の中のカードにドロップした場合
+            const foundationParent = cardElement.closest('[id^="player-foundation-"]');
+            if (foundationParent) {
+                const index = parseInt(foundationParent.id.split('-')[2]);
+                const json = e.dataTransfer.getData('text/plain');
+                if (json) {
+                    const data = JSON.parse(json);
+                    // ストックからの移動
+                    if (data.source.type === 'waste') {
+                        moveWasteToFoundation(index);
+                    } 
+                    // 場札からの移動
+                    else if (data.source.type === 'tableau') {
+                        gameState.selectedCard = { player: 'player', col: data.source.col, row: data.source.row };
+                        moveCardToFoundation(index);
+                    }
+                }
+                return;
+            }
+
+            // B. 場札（Tableau）のカードにドロップした場合
             if (source && source.type === 'tableau') {
                 handleDropOnTableau(e, source.col);
             }
         });
 
-        // 【重要】クリック処理（移動 or 選択）
+        // --- Click ---
         cardElement.addEventListener('click', (e) => {
             e.stopPropagation();
             
-            // 1. すでに他のカードを選択中なら、このカード（の列）へ移動を試みる！
+            // 移動トライ
             if (gameState.selectedCard && 
                 (gameState.selectedCard.col !== source.col || gameState.selectedCard.player !== 'player')) {
                 
-                // 行き先が場札なら移動トライ
                 if (source.type === 'tableau') {
                     moveCardToTableau(source.col);
-                    return; // 移動処理したら終わり
+                    return;
                 }
             }
 
-            // 2. 移動じゃなければ、このカードを選択する
-            selectCard('player', source.col, source.row);
-            
-            // 3. 一番上のカードなら自動移動（スマートムーブ）も試す
-            if (source.type === 'tableau' && 
-                row === gameState.player.tableau[source.col].length - 1) {
-                attemptSmartMove(source.col, source.row);
+            // 選択
+            if (source.type === 'tableau') {
+                selectCard('player', source.col, source.row);
+                // スマートムーブ
+                if (source.row === gameState.player.tableau[source.col].length - 1) {
+                    attemptSmartMove(source.col, source.row);
+                }
+            } else if (source.type === 'waste') {
+                // ストックのカードをクリックしたら組札へ自動移動トライ
+                 for(let i=0; i<4; i++) moveWasteToFoundation(i);
             }
         });
 
-        // --- スマホ向けタッチ操作（既存のまま維持） ---
+        // --- Mobile Touch ---
         let touchStartX = 0;
         let touchStartY = 0;
         let originalZIndex = '';
@@ -654,7 +682,9 @@ function createCardElement(card, hideDetails = false, source = null) {
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
             
+            // ★描画リセットさせない！
             if (source && source.type === 'tableau') {
+                 // selectCard関数は renderGame を呼ばないように修正済み
                  selectCard('player', source.col, source.row);
             }
         }, { passive: false });
@@ -672,27 +702,47 @@ function createCardElement(card, hideDetails = false, source = null) {
             e.preventDefault();
             cardElement.style.transform = '';
             cardElement.style.zIndex = originalZIndex;
-            
             cardElement.style.visibility = 'hidden'; 
+            
             const touch = e.changedTouches[0];
             const elementUnderFinger = document.elementFromPoint(touch.clientX, touch.clientY);
             cardElement.style.visibility = 'visible';
 
             if (elementUnderFinger) {
+                // 組札判定
                 const foundation = elementUnderFinger.closest('[id^="player-foundation-"]');
                 if (foundation) {
                     const index = parseInt(foundation.id.split('-')[2]);
-                    moveCardToFoundation(index);
+                    if (source.type === 'waste') {
+                        moveWasteToFoundation(index);
+                    } else {
+                        moveCardToFoundation(index);
+                    }
                     return;
                 }
+                
+                // 場札判定
                 const tableau = elementUnderFinger.closest('[id^="player-tableau-"]');
                 if (tableau) {
                     const col = parseInt(tableau.id.split('-')[2]);
-                    moveCardToTableau(col);
+                    
+                    // ★修正：ストック（Waste）からの移動をここで処理！
+                    if (source.type === 'waste') {
+                        const wasteCard = gameState.player.waste[gameState.player.waste.length - 1];
+                        if (canMoveToTableau(gameState.player.tableau[col], wasteCard)) {
+                            gameState.player.waste.pop();
+                            gameState.player.tableau[col].push(wasteCard);
+                            renderGame();
+                        }
+                    } else {
+                        // 場札間の移動
+                        moveCardToTableau(col);
+                    }
                     return;
                 }
             }
             
+            // タップ判定（自動移動）
             if (Math.abs(touch.clientX - touchStartX) < 10 && Math.abs(touch.clientY - touchStartY) < 10) {
                 if (source && source.type === 'tableau') {
                     attemptSmartMove(source.col, source.row);
@@ -703,7 +753,7 @@ function createCardElement(card, hideDetails = false, source = null) {
         });
     }
 
-    // --- 画像設定 ---
+    // 画像設定（既存のまま）
     if (hideDetails) {
         if (card.faceUp) {
             cardElement.classList.add('face-up');
@@ -753,59 +803,78 @@ function drawFromStock() {
     }
 }
 
-// Select a card
+// Select a card (描画リセットを廃止して軽量化！)
 function selectCard(player, col, row) {
     if (player !== 'player') return;
     
     const card = gameState.player.tableau[col][row];
+    if (!card.faceUp) return;
     
-    if (!card.faceUp) {
-        return;
-    }
-    
-    // Check if this is a multi-card selection
-    if (gameState.selectedCard && gameState.selectedCard.col === col) {
-        // If the same column is clicked, select multiple cards
-        gameState.selectedCard = { player, col, row };
+    // 選択の切り替え
+    if (gameState.selectedCard && gameState.selectedCard.col === col && gameState.selectedCard.row === row) {
+        gameState.selectedCard = null; // 解除
     } else {
-        // Otherwise, select single card
         gameState.selectedCard = { player, col, row };
     }
     
-    // Highlight selected card(s)
-    renderGame();
-    highlightSelectedCard(player, col, row);
+    // ★ここが重要！renderGame()を消して、見た目だけ変える関数にした！
+    updateSelectionVisuals();
 }
 
-// Select multiple cards
+// Select multiple cards (こちらも軽量化)
 function selectCards(player, col, startRow) {
     if (player !== 'player') return;
     
     const column = gameState.player.tableau[col];
+    if (startRow < 0 || startRow >= column.length) return;
+    if (!column[startRow].faceUp) return;
     
-    // Validate that the start row is within the column
-    if (startRow < 0 || startRow >= column.length) {
-        return;
-    }
-    
-    // Check that the clicked card is face up
-    if (!column[startRow].faceUp) {
-        return;
-    }
-    
-    // Validate that all cards from startRow to the end are face up
+    // バリデーション
     for (let i = startRow; i < column.length; i++) {
-        if (!column[i].faceUp) {
-            return;
-        }
+        if (!column[i].faceUp) return;
     }
     
-    // Set the selection
     gameState.selectedCard = { player, col, row: startRow, isMulti: true };
     
-    // Highlight selected cards
-    renderGame();
-    highlightSelectedCards(player, col, startRow);
+    // ★ここも見た目変更のみ！
+    updateSelectionVisuals();
+}
+
+// ★新関数：画面全体を作り直さずに、選択枠だけつける関数
+function updateSelectionVisuals() {
+    // 一旦全部のハイライトを消す
+    const allCards = document.querySelectorAll('.card');
+    allCards.forEach(card => {
+        card.style.boxShadow = '';
+        card.style.transform = card.style.transform.replace('translateY(-10px)', '');
+    });
+
+    // 選択中のカードがあれば光らせる
+    if (gameState.selectedCard && gameState.selectedCard.player === 'player') {
+        const { col, row, isMulti } = gameState.selectedCard;
+        const columnElement = document.getElementById(`player-tableau-${col}`);
+        if (!columnElement) return;
+        
+        const cards = columnElement.children;
+        
+        if (isMulti) {
+            // 束の選択
+            for (let i = row; i < cards.length; i++) {
+                if (cards[i]) {
+                    cards[i].style.boxShadow = '0 0 10px gold';
+                    // ドラッグ中じゃなければ浮かす
+                    if (!cards[i].classList.contains('dragging')) {
+                        // 既存のtransformを維持しつつ浮かすのは難しいので、boxShadowメインにする
+                    }
+                }
+            }
+        } else {
+            // 単体選択
+            if (cards[row]) {
+                cards[row].style.boxShadow = '0 0 10px gold';
+            }
+        }
+    }
 }
 
 // Highlight selected cards
@@ -837,40 +906,32 @@ function highlightSelectedCard(player, col, row) {
 }
 
 // Move selected card to foundation
+// Move selected card to foundation
 function moveCardToFoundation(foundationIndex) {
-    if (!gameState.selectedCard) {
-        return;
-    }
+    if (!gameState.selectedCard) return;
     
-    const { player, col, row } = gameState.selectedCard;
+    const { player, col, row, isMulti } = gameState.selectedCard;
     if (player !== 'player') return;
     
+    // ★束（複数枚）の場合は組札に置けない
+    if (isMulti) return;
+
     // Can only move the last card in a column to foundation
-    if (row !== gameState.player.tableau[col].length - 1) {
-        return;
-    }
+    // (selectCardで制御してるけど念の為)
+    if (row !== gameState.player.tableau[col].length - 1) return;
     
     const card = gameState.player.tableau[col][row];
     
     // Check if card can be moved to foundation
     if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
-        // Remove card from tableau
         gameState.player.tableau[col].pop();
-        // Flip the new top card if it's face down
         if (gameState.player.tableau[col].length > 0 && !gameState.player.tableau[col][gameState.player.tableau[col].length - 1].faceUp) {
             gameState.player.tableau[col][gameState.player.tableau[col].length - 1].faceUp = true;
         }
-        // Add card to foundation
         gameState.player.foundations[foundationIndex].push(card);
-        // Clear selection
         gameState.selectedCard = null;
-        // Re-render game
         renderGame();
-        
-        // Check if player won
-        if (checkWinCondition('player')) {
-            showGameOver(true);
-        }
+        if (checkWinCondition('player')) showGameOver(true);
     }
 }
 
