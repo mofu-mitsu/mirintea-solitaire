@@ -582,104 +582,94 @@ function createCardElement(card, hideDetails = false, source = null) {
     const cardElement = document.createElement('div');
     cardElement.className = `card ${card.color}`;
     
-    // カードの元場所情報（source）を持たせる
-    // source = { type: 'tableau', col: 0, row: 5 } みたいな情報
-    cardElement.dataset.source = JSON.stringify(source);
+    // カードの元場所情報をセット
+    if (source) {
+        cardElement.dataset.source = JSON.stringify(source);
+    }
     
-    // Make card draggable
-    cardElement.draggable = true;
-    
-    // --- PC向けドラッグ開始 ---
-    cardElement.addEventListener('dragstart', (e) => {
-        e.stopPropagation(); // 親要素のイベント発火を防ぐ
-        // カード情報と、元の場所（source）をセットで渡す！
-        const dragData = {
-            card: card,
-            source: source
-        };
-        e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
-        e.dataTransfer.effectAllowed = 'move'; // 移動マークにする
-    });
-    
-    // --- スマホ向けタッチ操作 ---
-    // スマホでのドラッグ用変数
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let originalZIndex = '';
-    
-    cardElement.addEventListener('touchstart', (e) => {
-        if (e.touches.length > 1) return; // 2本指タップなどは無視
-        e.stopPropagation(); // 重要：裏の要素のスクロール等を防ぐ
+    // ★修正ポイント1：みりんてゃ（hideDetails=true）ならドラッグさせない！
+    // プレイヤーのカード（hideDetails=false）かつ、表向きのカードだけドラッグ可能にする
+    if (!hideDetails && card.faceUp) {
+        cardElement.draggable = true;
         
-        const touch = e.touches[0];
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        
-        // タッチした瞬間も、タップ判定のためにselectedCardに入れておく
-        if (source && source.type === 'tableau') {
-             selectCard('player', source.col, source.row);
-        }
-    }, { passive: false }); // passive: false で preventDefault を有効にする
+        // --- PC向けドラッグ開始 ---
+        cardElement.addEventListener('dragstart', (e) => {
+            e.stopPropagation();
+            const dragData = {
+                card: card,
+                source: source
+            };
+            e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+            e.dataTransfer.effectAllowed = 'move';
+        });
 
-    cardElement.addEventListener('touchmove', (e) => {
-        e.preventDefault(); // 画面スクロールを止める
+        // --- スマホ向けタッチ操作 ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let originalZIndex = '';
         
-        const touch = e.touches[0];
-        // 見た目だけ指についてくるように動かす（簡易的）
-        // ※本来はabsoluteなどで動かすのが綺麗だけど、一旦transformで対応
-        const moveX = touch.clientX - touchStartX;
-        const moveY = touch.clientY - touchStartY;
-        cardElement.style.transform = `translate(${moveX}px, ${moveY}px)`;
-        cardElement.style.zIndex = '1000'; // 最前面へ
-    }, { passive: false });
+        cardElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) return;
+            e.stopPropagation();
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            
+            // タップ判定用
+            if (source && source.type === 'tableau') {
+                 selectCard('player', source.col, source.row);
+            }
+        }, { passive: false });
 
-    cardElement.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        
-        // 見た目を元に戻す
-        cardElement.style.transform = '';
-        cardElement.style.zIndex = originalZIndex;
-        
-        // ★ここがスマホ対応のキモ！★
-        // 一瞬だけ自分（カード）を消して、その「下」にある要素（組札とか）を探す
-        cardElement.style.visibility = 'hidden'; 
-        const touch = e.changedTouches[0];
-        const elementUnderFinger = document.elementFromPoint(touch.clientX, touch.clientY);
-        cardElement.style.visibility = 'visible'; // すぐ戻す
+        cardElement.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const moveX = touch.clientX - touchStartX;
+            const moveY = touch.clientY - touchStartY;
+            cardElement.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            cardElement.style.zIndex = '1000';
+        }, { passive: false });
 
-        // ドロップ先が見つかったら処理
-        if (elementUnderFinger) {
-            // 組札（Foundation）の上で離した？
-            const foundation = elementUnderFinger.closest('[id^="player-foundation-"]');
-            if (foundation) {
-                const index = parseInt(foundation.id.split('-')[2]);
-                moveCardToFoundation(index);
-                return;
+        cardElement.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            cardElement.style.transform = '';
+            cardElement.style.zIndex = originalZIndex;
+            
+            // 一瞬消して下の要素判定
+            cardElement.style.visibility = 'hidden'; 
+            const touch = e.changedTouches[0];
+            const elementUnderFinger = document.elementFromPoint(touch.clientX, touch.clientY);
+            cardElement.style.visibility = 'visible';
+
+            if (elementUnderFinger) {
+                // Foundation判定
+                const foundation = elementUnderFinger.closest('[id^="player-foundation-"]');
+                if (foundation) {
+                    const index = parseInt(foundation.id.split('-')[2]);
+                    moveCardToFoundation(index);
+                    return;
+                }
+                // Tableau判定
+                const tableau = elementUnderFinger.closest('[id^="player-tableau-"]');
+                if (tableau) {
+                    const col = parseInt(tableau.id.split('-')[2]);
+                    moveCardToTableau(col);
+                    return;
+                }
             }
             
-            // 場札（Tableau）の上で離した？
-            const tableau = elementUnderFinger.closest('[id^="player-tableau-"]');
-            if (tableau) {
-                const col = parseInt(tableau.id.split('-')[2]);
-                moveCardToTableau(col);
-                return;
+            // タップ（自動移動トライ）
+            if (Math.abs(touch.clientX - touchStartX) < 10 && Math.abs(touch.clientY - touchStartY) < 10) {
+                if (source && source.type === 'tableau') {
+                    attemptSmartMove(source.col, source.row);
+                } else if (source && source.type === 'waste') {
+                    for(let i=0; i<4; i++) moveWasteToFoundation(i);
+                }
             }
-        }
-        
-        // ドラッグじゃなくて「タップ」だった場合（移動量が少ない場合）
-        // 自動移動を試みる
-        if (Math.abs(touch.clientX - touchStartX) < 10 && Math.abs(touch.clientY - touchStartY) < 10) {
-            if (source && source.type === 'tableau') {
-                // 自動移動トライ！
-                attemptSmartMove(source.col, source.row);
-            } else if (source && source.type === 'waste') {
-                // 捨て札からの自動移動
-                for(let i=0; i<4; i++) moveWasteToFoundation(i);
-            }
-        }
-    });
-    
-    // --- 画像設定など（変更なし） ---
+        });
+    }
+
+    // --- 画像設定 ---
     if (hideDetails) {
         if (card.faceUp) {
             cardElement.classList.add('face-up');
@@ -956,7 +946,8 @@ function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         
-        foundation.addEventListener('dragover', (e) => {
+        // ★修正ポイント2：ここが 'foundation' になってたから直したよ！
+        tableauColumn.addEventListener('dragover', (e) => {
             e.preventDefault(); // Allow drop
             e.dataTransfer.dropEffect = 'move';
         });
@@ -968,26 +959,19 @@ function addTableauEventListeners() {
             
             const data = JSON.parse(json);
             
-            // 場札へのドロップ処理
             if (data.source.type === 'tableau') {
-                // 複数選択の場合も考慮してセット
-                // (とりあえず単体選択としてセットして、move関数内で処理させる)
                 gameState.selectedCard = { player: 'player', col: data.source.col, row: data.source.row };
-                
-                // もし「列の途中」を掴んでいた場合の処理が必要ならここで isMulti を判定するが
-                // 一旦シンプルに moveCardToTableau に任せる
                 moveCardToTableau(col);
             } else if (data.source.type === 'waste') {
-                 // 捨て札から場札への移動関数がないので、既存ロジックで対応できるか確認
-                 // moveCardToTableau は tableau間の移動前提っぽいので、
-                 // Wasteからの移動ロジックを追加する必要があるかも。
-                 // とりあえず今回は「tableau間」の移動を優先して修正。
-                 
-                 // ★WasteからTableauへの移動を追加するならここ★
+                 // WasteからTableauへの移動ロジック
                  const card = gameState.player.waste[gameState.player.waste.length - 1];
                  if (canMoveToTableau(gameState.player.tableau[col], card)) {
                      gameState.player.waste.pop();
                      gameState.player.tableau[col].push(card);
+                     // 移動したら表向きにする処理
+                     if(gameState.player.waste.length > 0) {
+                         // wasteの一番上は常に表向き済み
+                     }
                      renderGame();
                  }
             }
