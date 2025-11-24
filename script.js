@@ -568,79 +568,122 @@ function renderMirinteaBoard() {
 }
 
 // Create a card element
-function createCardElement(card, hideDetails = false) {
+function createCardElement(card, hideDetails = false, source = null) {
     const cardElement = document.createElement('div');
     cardElement.className = `card ${card.color}`;
+    
+    // カードの元場所情報（source）を持たせる
+    // source = { type: 'tableau', col: 0, row: 5 } みたいな情報
+    cardElement.dataset.source = JSON.stringify(source);
     
     // Make card draggable
     cardElement.draggable = true;
     
-    // Add drag start event
+    // --- PC向けドラッグ開始 ---
     cardElement.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/plain', JSON.stringify(card));
+        e.stopPropagation(); // 親要素のイベント発火を防ぐ
+        // カード情報と、元の場所（source）をセットで渡す！
+        const dragData = {
+            card: card,
+            source: source
+        };
+        e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+        e.dataTransfer.effectAllowed = 'move'; // 移動マークにする
     });
     
-    // Add touch events for mobile devices
-    let touchStartX, touchStartY;
+    // --- スマホ向けタッチ操作 ---
+    // スマホでのドラッグ用変数
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let originalZIndex = '';
     
     cardElement.addEventListener('touchstart', (e) => {
-        // Prevent scrolling when touching cards
-        e.preventDefault();
+        if (e.touches.length > 1) return; // 2本指タップなどは無視
+        e.stopPropagation(); // 重要：裏の要素のスクロール等を防ぐ
         
-        // Store initial touch position
         const touch = e.touches[0];
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
         
-        // Store card data for touch move
-        cardElement.cardData = card;
-    });
-    
+        // タッチした瞬間も、タップ判定のためにselectedCardに入れておく
+        if (source && source.type === 'tableau') {
+             selectCard('player', source.col, source.row);
+        }
+    }, { passive: false }); // passive: false で preventDefault を有効にする
+
     cardElement.addEventListener('touchmove', (e) => {
-        // Prevent scrolling when moving cards
-        e.preventDefault();
-    });
-    
+        e.preventDefault(); // 画面スクロールを止める
+        
+        const touch = e.touches[0];
+        // 見た目だけ指についてくるように動かす（簡易的）
+        // ※本来はabsoluteなどで動かすのが綺麗だけど、一旦transformで対応
+        const moveX = touch.clientX - touchStartX;
+        const moveY = touch.clientY - touchStartY;
+        cardElement.style.transform = `translate(${moveX}px, ${moveY}px)`;
+        cardElement.style.zIndex = '1000'; // 最前面へ
+    }, { passive: false });
+
     cardElement.addEventListener('touchend', (e) => {
-        // Prevent scrolling when touching cards
         e.preventDefault();
         
-        // Find the drop target
-        const touch = e.changedTouches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        // 見た目を元に戻す
+        cardElement.style.transform = '';
+        cardElement.style.zIndex = originalZIndex;
         
-        // Check if the element is a foundation or tableau column
-        if (element && element.id) {
-            if (element.id.startsWith('player-foundation-')) {
-                const foundationIndex = parseInt(element.id.split('-')[2]);
-                moveCardToFoundation(foundationIndex);
-            } else if (element.id.startsWith('player-tableau-')) {
-                const colIndex = parseInt(element.id.split('-')[2]);
-                moveCardToTableau(colIndex);
+        // ★ここがスマホ対応のキモ！★
+        // 一瞬だけ自分（カード）を消して、その「下」にある要素（組札とか）を探す
+        cardElement.style.visibility = 'hidden'; 
+        const touch = e.changedTouches[0];
+        const elementUnderFinger = document.elementFromPoint(touch.clientX, touch.clientY);
+        cardElement.style.visibility = 'visible'; // すぐ戻す
+
+        // ドロップ先が見つかったら処理
+        if (elementUnderFinger) {
+            // 組札（Foundation）の上で離した？
+            const foundation = elementUnderFinger.closest('[id^="player-foundation-"]');
+            if (foundation) {
+                const index = parseInt(foundation.id.split('-')[2]);
+                moveCardToFoundation(index);
+                return;
+            }
+            
+            // 場札（Tableau）の上で離した？
+            const tableau = elementUnderFinger.closest('[id^="player-tableau-"]');
+            if (tableau) {
+                const col = parseInt(tableau.id.split('-')[2]);
+                moveCardToTableau(col);
+                return;
+            }
+        }
+        
+        // ドラッグじゃなくて「タップ」だった場合（移動量が少ない場合）
+        // 自動移動を試みる
+        if (Math.abs(touch.clientX - touchStartX) < 10 && Math.abs(touch.clientY - touchStartY) < 10) {
+            if (source && source.type === 'tableau') {
+                // 自動移動トライ！
+                attemptSmartMove(source.col, source.row);
+            } else if (source && source.type === 'waste') {
+                // 捨て札からの自動移動
+                for(let i=0; i<4; i++) moveWasteToFoundation(i);
             }
         }
     });
     
+    // --- 画像設定など（変更なし） ---
     if (hideDetails) {
-        // For opponent cards, show back or face down
         if (card.faceUp) {
             cardElement.classList.add('face-up');
-            // Use card image
             const fileName = getCardFileName(card);
-            const imagePath = `cards/${fileName}.png`;  // Changed to relative path
-            cardElement.style.backgroundImage = `url('${imagePath}')`;
+            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
             cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
         }
     } else {
-        // For player cards
         if (card.faceUp) {
             cardElement.classList.add('face-up');
-            // Use card image
             const fileName = getCardFileName(card);
-            const imagePath = `cards/${fileName}.png`;  // Changed to relative path
-            cardElement.style.backgroundImage = `url('${imagePath}')`;
+            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
             cardElement.style.backgroundSize = 'cover';
         } else {
             cardElement.classList.add('back');
@@ -1151,7 +1194,7 @@ function moveWasteToFoundation(foundationIndex) {
     }
 }
 
-// Update the renderTableau function to add click and drag events to cards
+// Update the renderTableau function
 function renderTableau() {
     // Render player tableau
     for (let col = 0; col < 7; col++) {
@@ -1160,27 +1203,22 @@ function renderTableau() {
         
         for (let row = 0; row < gameState.player.tableau[col].length; row++) {
             const card = gameState.player.tableau[col][row];
-            const cardElement = createCardElement(card);
+            
+            // ★ここで「このカードは col列目の row番目だよ」という情報を渡す！
+            const sourceInfo = { type: 'tableau', col: col, row: row };
+            const cardElement = createCardElement(card, false, sourceInfo);
             
             // Position cards vertically
             cardElement.style.top = `${row * 20}px`;
             
-            // Add click event to select card
+            // クリックイベント（PC用）
             cardElement.addEventListener('click', (e) => {
-                // 1. 重要：カードを押した時、裏の列までクリックが貫通しないように止める！
                 e.stopPropagation();
-                
-                // 2. カードを選択状態にする
-                // If this is the last card in the column, try to auto-move to foundation first
+                // まず選択状態にする
+                selectCard('player', col, row);
+                // その後、自動移動（スマートムーブ）を試みる
                 if (row === gameState.player.tableau[col].length - 1) {
-                    // Try to auto-move to foundation
-                    if (!tryAutoMoveToFoundation(col, row)) {
-                        // If auto-move failed, select the card
-                        selectCard('player', col, row);
-                    }
-                } else {
-                    // For other cards, check if we should select multiple cards
-                    selectCards('player', col, row);
+                    attemptSmartMove(col, row);
                 }
             });
             
