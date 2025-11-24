@@ -587,23 +587,62 @@ function createCardElement(card, hideDetails = false, source = null) {
         cardElement.dataset.source = JSON.stringify(source);
     }
     
-    // ★修正ポイント1：みりんてゃ（hideDetails=true）ならドラッグさせない！
-    // プレイヤーのカード（hideDetails=false）かつ、表向きのカードだけドラッグ可能にする
+    // --- プレイヤー側のカード処理 ---
     if (!hideDetails && card.faceUp) {
         cardElement.draggable = true;
         
-        // --- PC向けドラッグ開始 ---
+        // 【重要】PCドラッグ開始
         cardElement.addEventListener('dragstart', (e) => {
             e.stopPropagation();
-            const dragData = {
-                card: card,
-                source: source
-            };
+            const dragData = { card: card, source: source };
             e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
             e.dataTransfer.effectAllowed = 'move';
         });
 
-        // --- スマホ向けタッチ操作 ---
+        // ★修正：カードの上でも「ドロップOK」にする（これで禁止マーク消える！）
+        cardElement.addEventListener('dragover', (e) => {
+            e.preventDefault(); // これがないとドロップできない
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        // ★修正：カードの上にドロップされたら、その「列」に置いたことにする
+        cardElement.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // 親（列）のイベントと重複しないように止める
+            
+            // もし場札（Tableau）のカードなら、その列番号を取得して処理を流す
+            if (source && source.type === 'tableau') {
+                handleDropOnTableau(e, source.col);
+            }
+        });
+
+        // 【重要】クリック処理（移動 or 選択）
+        cardElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // 1. すでに他のカードを選択中なら、このカード（の列）へ移動を試みる！
+            if (gameState.selectedCard && 
+                (gameState.selectedCard.col !== source.col || gameState.selectedCard.player !== 'player')) {
+                
+                // 行き先が場札なら移動トライ
+                if (source.type === 'tableau') {
+                    moveCardToTableau(source.col);
+                    return; // 移動処理したら終わり
+                }
+            }
+
+            // 2. 移動じゃなければ、このカードを選択する
+            selectCard('player', source.col, source.row);
+            
+            // 3. 一番上のカードなら自動移動（スマートムーブ）も試す
+            if (source.type === 'tableau' && 
+                row === gameState.player.tableau[source.col].length - 1) {
+                attemptSmartMove(source.col, source.row);
+            }
+        });
+
+        // --- スマホ向けタッチ操作（既存のまま維持） ---
         let touchStartX = 0;
         let touchStartY = 0;
         let originalZIndex = '';
@@ -615,7 +654,6 @@ function createCardElement(card, hideDetails = false, source = null) {
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
             
-            // タップ判定用
             if (source && source.type === 'tableau') {
                  selectCard('player', source.col, source.row);
             }
@@ -635,21 +673,18 @@ function createCardElement(card, hideDetails = false, source = null) {
             cardElement.style.transform = '';
             cardElement.style.zIndex = originalZIndex;
             
-            // 一瞬消して下の要素判定
             cardElement.style.visibility = 'hidden'; 
             const touch = e.changedTouches[0];
             const elementUnderFinger = document.elementFromPoint(touch.clientX, touch.clientY);
             cardElement.style.visibility = 'visible';
 
             if (elementUnderFinger) {
-                // Foundation判定
                 const foundation = elementUnderFinger.closest('[id^="player-foundation-"]');
                 if (foundation) {
                     const index = parseInt(foundation.id.split('-')[2]);
                     moveCardToFoundation(index);
                     return;
                 }
-                // Tableau判定
                 const tableau = elementUnderFinger.closest('[id^="player-tableau-"]');
                 if (tableau) {
                     const col = parseInt(tableau.id.split('-')[2]);
@@ -658,7 +693,6 @@ function createCardElement(card, hideDetails = false, source = null) {
                 }
             }
             
-            // タップ（自動移動トライ）
             if (Math.abs(touch.clientX - touchStartX) < 10 && Math.abs(touch.clientY - touchStartY) < 10) {
                 if (source && source.type === 'tableau') {
                     attemptSmartMove(source.col, source.row);
@@ -946,38 +980,61 @@ function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         
-        // ★修正ポイント：ここが 'foundation' になってた！！
-        // 正しくは 'tableauColumn' だね。これでドラッグ＆ドロップが復活するはず！
+        // 列自体へのドラッグ＆ドロップ
         tableauColumn.addEventListener('dragover', (e) => {
-            e.preventDefault(); // Allow drop
+            e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
         });
         
         tableauColumn.addEventListener('drop', (e) => {
             e.preventDefault();
-            const json = e.dataTransfer.getData('text/plain');
-            if (!json) return;
-            
-            const data = JSON.parse(json);
-            
-            if (data.source.type === 'tableau') {
-                gameState.selectedCard = { player: 'player', col: data.source.col, row: data.source.row };
-                moveCardToTableau(col);
-            } else if (data.source.type === 'waste') {
-                 // WasteからTableauへの移動ロジック
-                 const card = gameState.player.waste[gameState.player.waste.length - 1];
-                 if (canMoveToTableau(gameState.player.tableau[col], card)) {
-                     gameState.player.waste.pop();
-                     gameState.player.tableau[col].push(card);
-                     renderGame();
-                 }
-            }
+            handleDropOnTableau(e, col);
         });
         
+        // 列の背景クリックで移動
         tableauColumn.addEventListener('click', (e) => {
              e.stopPropagation();
              if (gameState.selectedCard) moveCardToTableau(col);
         });
+    }
+}
+
+// ★新機能：ドロップ処理をまとめた関数（カードへのドロップも列へのドロップもこれを使う）
+function handleDropOnTableau(e, targetCol) {
+    const json = e.dataTransfer.getData('text/plain');
+    if (!json) return;
+    
+    const data = JSON.parse(json);
+    
+    // 1. 場札から場札への移動
+    if (data.source.type === 'tableau') {
+        const sourceCol = data.source.col;
+        const sourceRow = data.source.row;
+        
+        // ★ここが修正ポイント！「束（複数枚）」かどうかを自動判定★
+        // もしドラッグしたカードが、その列の最後尾じゃなければ、それは「束」だ！
+        const isMulti = sourceRow < gameState.player.tableau[sourceCol].length - 1;
+        
+        gameState.selectedCard = { 
+            player: 'player', 
+            col: sourceCol, 
+            row: sourceRow,
+            isMulti: isMulti // これを追加しないと束で動かない！
+        };
+        
+        moveCardToTableau(targetCol);
+    } 
+    // 2. ストック（Waste）から場札への移動
+    else if (data.source.type === 'waste') {
+         const card = gameState.player.waste[gameState.player.waste.length - 1];
+         
+         // 移動できるかチェック
+         if (canMoveToTableau(gameState.player.tableau[targetCol], card)) {
+             gameState.player.waste.pop();
+             gameState.player.tableau[targetCol].push(card);
+             // 移動完了、再描画
+             renderGame();
+         }
     }
 }
 
