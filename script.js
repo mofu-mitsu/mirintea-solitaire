@@ -581,15 +581,30 @@ function createCardElement(card, hideDetails = false) {
     });
     
     // Add touch events for mobile devices
+    let touchStartX, touchStartY;
+    
     cardElement.addEventListener('touchstart', (e) => {
         // Prevent scrolling when touching cards
         e.preventDefault();
+        
+        // Store initial touch position
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
         
         // Store card data for touch move
         cardElement.cardData = card;
     });
     
+    cardElement.addEventListener('touchmove', (e) => {
+        // Prevent scrolling when moving cards
+        e.preventDefault();
+    });
+    
     cardElement.addEventListener('touchend', (e) => {
+        // Prevent scrolling when touching cards
+        e.preventDefault();
+        
         // Find the drop target
         const touch = e.changedTouches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -727,9 +742,7 @@ function moveCardToFoundation(foundationIndex) {
 
 // Move selected card to tableau column
 function moveCardToTableau(targetCol) {
-    console.log('Moving card to tableau column:', targetCol);
     if (!gameState.selectedCard) {
-        console.log('No card selected');
         return;
     }
     
@@ -738,12 +751,10 @@ function moveCardToTableau(targetCol) {
     
     // Get the selected card
     const card = gameState.player.tableau[col][row];
-    console.log('Moving card:', card);
     
     // Check if card can be moved to tableau column
     const targetColumn = gameState.player.tableau[targetCol];
     if (canMoveToTableau(targetColumn, card)) {
-        console.log('Card can be moved to tableau column');
         // Remove cards from current position
         const cardsToMove = gameState.player.tableau[col].splice(row);
         // Add cards to target column
@@ -756,8 +767,6 @@ function moveCardToTableau(targetCol) {
         gameState.selectedCard = null;
         // Re-render game
         renderGame();
-    } else {
-        console.log('Card cannot be moved to tableau column');
     }
 }
 
@@ -781,7 +790,10 @@ function addFoundationEventListeners() {
         });
         
         // Click event (for non-drag devices)
-        foundation.addEventListener('click', () => {
+        foundation.addEventListener('click', (e) => {
+            // Prevent event from bubbling up to parent elements
+            e.stopPropagation();
+            
             // If a card is selected, move it to foundation
             if (gameState.selectedCard) {
                 moveCardToFoundation(i);
@@ -794,6 +806,7 @@ function addFoundationEventListeners() {
         // Touch event (for mobile devices)
         foundation.addEventListener('touchend', (e) => {
             e.preventDefault();
+            
             // If a card is selected, move it to foundation
             if (gameState.selectedCard) {
                 moveCardToFoundation(i);
@@ -967,57 +980,6 @@ function calculateProgress(player) {
     return count;
 }
 
-// Check if a card can be moved to a foundation
-function canMoveToFoundation(foundation, card) {
-    if (foundation.length === 0) {
-        return card.rank === 'A';
-    }
-    
-    const topCard = foundation[foundation.length - 1];
-    
-    const suitMatch = topCard.suit === card.suit;
-    const rankMatch = getNextRank(topCard.rank) === card.rank;
-    const result = suitMatch && rankMatch;
-    
-    return result;
-}
-
-// Get next rank in sequence
-function getNextRank(rank) {
-    const index = RANKS.indexOf(rank);
-    return index < RANKS.length - 1 ? RANKS[index + 1] : null;
-}
-
-// Move card from waste to foundation
-function moveWasteToFoundation(foundationIndex) {
-    console.log('Moving waste card to foundation:', foundationIndex);
-    if (gameState.player.waste.length === 0) {
-        console.log('No card in waste');
-        return;
-    }
-    
-    const card = gameState.player.waste[gameState.player.waste.length - 1];
-    console.log('Moving card:', card);
-    
-    // Check if card can be moved to foundation
-    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
-        console.log('Card can be moved to foundation');
-        // Remove card from waste
-        gameState.player.waste.pop();
-        // Add card to foundation
-        gameState.player.foundations[foundationIndex].push(card);
-        // Re-render game
-        renderGame();
-        
-        // Check if player won
-        if (checkWinCondition('player')) {
-            showGameOver(true);
-        }
-    } else {
-        console.log('Card cannot be moved to foundation');
-    }
-}
-
 // Check if a card can be moved to a tableau column
 function canMoveToTableau(column, card) {
     // If column is empty, only K can be placed
@@ -1036,6 +998,62 @@ function canMoveToTableau(column, card) {
 function getPreviousRank(rank) {
     const index = RANKS.indexOf(rank);
     return index > 0 ? RANKS[index - 1] : null;
+}
+
+// Check if a card can be moved to a foundation
+function canMoveToFoundation(foundation, card) {
+    if (foundation.length === 0) {
+        return card.rank === 'A';
+    }
+    
+    const topCard = foundation[foundation.length - 1];
+    return topCard.suit === card.suit && getNextRank(topCard.rank) === card.rank;
+}
+
+// Get next rank in sequence
+function getNextRank(rank) {
+    const index = RANKS.indexOf(rank);
+    return index < RANKS.length - 1 ? RANKS[index + 1] : null;
+}
+
+// ★この新しい関数を追加してね！★
+// カードをクリックした時、自動で組札（Foundation）に移動させる便利機能
+function tryAutoMoveToFoundation(col, row) {
+    const card = gameState.player.tableau[col][row];
+    
+    // 4つの組札置き場（ハート、ダイヤ、クラブ、スペード）を全部チェック
+    for (let i = 0; i < 4; i++) {
+        if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+            // 移動できる場所を見つけたら、即座に移動！
+            moveCardToFoundation(i);
+            return true; // 移動成功！
+        }
+    }
+    return false; // 移動できなかった
+}
+
+// Move card from waste to foundation
+function moveWasteToFoundation(foundationIndex) {
+    if (gameState.player.waste.length === 0) {
+        return;
+    }
+    
+    const card = gameState.player.waste[gameState.player.waste.length - 1];
+    
+    // Check if card can be moved to foundation
+    if (canMoveToFoundation(gameState.player.foundations[foundationIndex], card)) {
+        // Remove card from waste
+        gameState.player.waste.pop();
+        // Add card to foundation
+        gameState.player.foundations[foundationIndex].push(card);
+        // Re-render game
+        renderGame();
+        
+        // Check if player won
+        if (checkWinCondition('player')) {
+            showGameOver(true);
+        }
+    }
 }
 
 // Update the renderTableau function to add click and drag events to cards
@@ -1086,22 +1104,6 @@ function renderTableau() {
             tableauColumn.appendChild(cardElement);
         }
     }
-}
-
-// ★この新しい関数を追加してね！★
-// カードをクリックした時、自動で組札（Foundation）に移動させる便利機能
-function tryAutoMoveToFoundation(col, row) {
-    const card = gameState.player.tableau[col][row];
-    
-    // 4つの組札置き場（ハート、ダイヤ、クラブ、スペード）を全部チェック
-    for (let i = 0; i < 4; i++) {
-        if (canMoveToFoundation(gameState.player.foundations[i], card)) {
-            // 移動できる場所を見つけたら、即座に移動！
-            moveCardToFoundation(i);
-            return true; // 移動成功！
-        }
-    }
-    return false; // 移動できなかった
 }
 
 // Add click event listeners to tableau columns
