@@ -946,7 +946,8 @@ function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         
-        // ★修正ポイント2：ここが 'foundation' になってたから直したよ！
+        // ★修正ポイント：ここが 'foundation' になってた！！
+        // 正しくは 'tableauColumn' だね。これでドラッグ＆ドロップが復活するはず！
         tableauColumn.addEventListener('dragover', (e) => {
             e.preventDefault(); // Allow drop
             e.dataTransfer.dropEffect = 'move';
@@ -968,10 +969,6 @@ function addTableauEventListeners() {
                  if (canMoveToTableau(gameState.player.tableau[col], card)) {
                      gameState.player.waste.pop();
                      gameState.player.tableau[col].push(card);
-                     // 移動したら表向きにする処理
-                     if(gameState.player.waste.length > 0) {
-                         // wasteの一番上は常に表向き済み
-                     }
                      renderGame();
                  }
             }
@@ -1141,7 +1138,7 @@ function calculateProgress(player) {
 
 // Check if a card can be moved to a tableau column
 function canMoveToTableau(column, card) {
-    // If column is empty, only K can be placed
+    // 中段が空なら、K（キング）だけ置ける（ここは合ってるよ！）
     if (column.length === 0) {
         return card.rank === 'K';
     }
@@ -1149,8 +1146,10 @@ function canMoveToTableau(column, card) {
     // Get the top card of the column
     const topCard = column[column.length - 1];
     
-    // Card must be opposite color and one rank lower
-    return topCard.color !== card.color && getLowerRank(card.rank) === topCard.rank;
+    // ★修正ポイント★
+    // 「場のカード(topCard)」の1つ下が、「持ってるカード(card)」と同じかチェックする
+    // 前のコード： getLowerRank(card.rank) === topCard.rank （逆だった！）
+    return topCard.color !== card.color && getLowerRank(topCard.rank) === card.rank;
 }
 
 // Get the rank that is one lower than the given rank
