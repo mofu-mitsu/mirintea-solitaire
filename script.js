@@ -686,11 +686,68 @@ function selectCard(player, col, row) {
         return;
     }
     
-    gameState.selectedCard = { player, col, row };
+    // Check if this is a multi-card selection
+    if (gameState.selectedCard && gameState.selectedCard.col === col) {
+        // If the same column is clicked, select multiple cards
+        gameState.selectedCard = { player, col, row };
+    } else {
+        // Otherwise, select single card
+        gameState.selectedCard = { player, col, row };
+    }
     
-    // Highlight selected card
+    // Highlight selected card(s)
     renderGame();
     highlightSelectedCard(player, col, row);
+}
+
+// Select multiple cards
+function selectCards(player, col, startRow) {
+    if (player !== 'player') return;
+    
+    const column = gameState.player.tableau[col];
+    
+    // Validate that the start row is within the column
+    if (startRow < 0 || startRow >= column.length) {
+        return;
+    }
+    
+    // Check that the clicked card is face up
+    if (!column[startRow].faceUp) {
+        return;
+    }
+    
+    // Validate that all cards from startRow to the end are face up
+    for (let i = startRow; i < column.length; i++) {
+        if (!column[i].faceUp) {
+            return;
+        }
+    }
+    
+    // Set the selection
+    gameState.selectedCard = { player, col, row: startRow, isMulti: true };
+    
+    // Highlight selected cards
+    renderGame();
+    highlightSelectedCards(player, col, startRow);
+}
+
+// Highlight selected cards
+function highlightSelectedCards(player, col, startRow) {
+    const columnElement = document.querySelector(`#${player}-tableau-${col}`);
+    
+    // Remove highlight from all cards first
+    const allCards = columnElement.querySelectorAll('.card');
+    allCards.forEach(card => {
+        card.style.boxShadow = '';
+        card.style.transform = '';
+    });
+    
+    // Highlight selected cards
+    for (let i = startRow; i < allCards.length; i++) {
+        const cardElement = allCards[i];
+        cardElement.style.boxShadow = '0 0 10px gold';
+        cardElement.style.transform = 'translateY(-10px)';
+    }
 }
 
 // Highlight selected card
@@ -746,17 +803,42 @@ function moveCardToTableau(targetCol) {
         return;
     }
     
-    const { player, col, row } = gameState.selectedCard;
+    const { player, col, row, isMulti } = gameState.selectedCard;
     if (player !== 'player') return;
     
-    // Get the selected card
-    const card = gameState.player.tableau[col][row];
+    let cardsToMove;
     
-    // Check if card can be moved to tableau column
+    // If it's a multi-card selection, move all cards from the selected row to the end
+    if (isMulti) {
+        cardsToMove = gameState.player.tableau[col].splice(row);
+    } else {
+        // Otherwise, just move the single card
+        cardsToMove = gameState.player.tableau[col].splice(row, 1);
+    }
+    
+    // Check if the cards can be moved to the target column
     const targetColumn = gameState.player.tableau[targetCol];
-    if (canMoveToTableau(targetColumn, card)) {
-        // Remove cards from current position
-        const cardsToMove = gameState.player.tableau[col].splice(row);
+    let canMove = true;
+    
+    // Validate that all cards can be placed in sequence
+    for (let i = 0; i < cardsToMove.length; i++) {
+        if (i === 0) {
+            // First card must be compatible with the target column
+            if (!canMoveToTableau(targetColumn, cardsToMove[i])) {
+                canMove = false;
+                break;
+            }
+        } else {
+            // Subsequent cards must be compatible with the previous card in the sequence
+            if (cardsToMove[i-1].color === cardsToMove[i].color || 
+                getLowerRank(cardsToMove[i-1].rank) !== cardsToMove[i].rank) {
+                canMove = false;
+                break;
+            }
+        }
+    }
+    
+    if (canMove) {
         // Add cards to target column
         gameState.player.tableau[targetCol].push(...cardsToMove);
         // Flip the new top card if it's face down
@@ -765,6 +847,11 @@ function moveCardToTableau(targetCol) {
         }
         // Clear selection
         gameState.selectedCard = null;
+        // Re-render game
+        renderGame();
+    } else {
+        // If the move is not valid, put the cards back
+        gameState.player.tableau[col].splice(row, 0, ...cardsToMove);
         // Re-render game
         renderGame();
     }
@@ -842,13 +929,21 @@ function addTableauEventListeners() {
         tableauColumn.addEventListener('click', (e) => {
             // Prevent event from bubbling up to parent elements
             e.stopPropagation();
-            moveCardToTableau(col);
+            
+            // Check if a card is selected
+            if (gameState.selectedCard) {
+                moveCardToTableau(col);
+            }
         });
         
         // Touch event (for mobile devices)
         tableauColumn.addEventListener('touchend', (e) => {
             e.preventDefault();
-            moveCardToTableau(col);
+            
+            // Check if a card is selected
+            if (gameState.selectedCard) {
+                moveCardToTableau(col);
+            }
         });
     }
 }
@@ -991,11 +1086,11 @@ function canMoveToTableau(column, card) {
     const topCard = column[column.length - 1];
     
     // Card must be opposite color and one rank lower
-    return topCard.color !== card.color && getPreviousRank(topCard.rank) === card.rank;
+    return topCard.color !== card.color && getLowerRank(card.rank) === topCard.rank;
 }
 
-// Get previous rank in sequence
-function getPreviousRank(rank) {
+// Get the rank that is one lower than the given rank
+function getLowerRank(rank) {
     const index = RANKS.indexOf(rank);
     return index > 0 ? RANKS[index - 1] : null;
 }
@@ -1076,12 +1171,16 @@ function renderTableau() {
                 e.stopPropagation();
                 
                 // 2. カードを選択状態にする
-                selectCard('player', col, row);
-
-                // 3. 【新機能】一番手前のカードなら、自動で右上の組札に飛ぶかチェック！
-                // これで「A」とかをタップするだけでシュッと飛んでいくよ！
+                // If this is the last card in the column, try to auto-move to foundation first
                 if (row === gameState.player.tableau[col].length - 1) {
-                    tryAutoMoveToFoundation(col, row);
+                    // Try to auto-move to foundation
+                    if (!tryAutoMoveToFoundation(col, row)) {
+                        // If auto-move failed, select the card
+                        selectCard('player', col, row);
+                    }
+                } else {
+                    // For other cards, check if we should select multiple cards
+                    selectCards('player', col, row);
                 }
             });
             
