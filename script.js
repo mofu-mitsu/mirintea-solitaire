@@ -510,14 +510,24 @@ function renderPlayerBoard() {
         playerStock.appendChild(cardBack);
     }
     
-    // Render waste
+    // Render waste (inside renderPlayerBoard function)
     const playerWaste = document.getElementById('player-waste');
     playerWaste.innerHTML = '';
     if (gameState.player.waste.length > 0) {
         const topCard = gameState.player.waste[gameState.player.waste.length - 1];
-        const cardElement = createCardElement(topCard);
+        // ★ここで source: 'waste' を渡す
+        const cardElement = createCardElement(topCard, false, { type: 'waste' });
+        
+        // クリックで自動移動
+        cardElement.addEventListener('click', (e) => {
+             e.stopPropagation();
+             // 4つの組札のどこかに行けるか試す
+             for(let i=0; i<4; i++) moveWasteToFoundation(i);
+        });
+        
         playerWaste.appendChild(cardElement);
     }
+
     
     // Render foundations
     for (let i = 0; i < 4; i++) {
@@ -904,46 +914,39 @@ function moveCardToTableau(targetCol) {
 function addFoundationEventListeners() {
     for (let i = 0; i < 4; i++) {
         const foundation = document.getElementById(`player-foundation-${i}`);
-        // Allow drop
+        
+        // Allow drop (これが無いと禁止マークが出る！)
         foundation.addEventListener('dragover', (e) => {
-            e.preventDefault();
+            e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move'; // 「移動できるよ」ってカーソルにする
         });
         
         // Handle drop
         foundation.addEventListener('drop', (e) => {
             e.preventDefault();
-            const cardData = e.dataTransfer.getData('text/plain');
-            const card = JSON.parse(cardData);
+            const json = e.dataTransfer.getData('text/plain');
+            if (!json) return;
             
-            // Move card to foundation
-            moveCardToFoundation(i);
+            const data = JSON.parse(json);
+            
+            // ★超重要：ドロップされたデータを見て、強制的に「選択状態」にする
+            // これで既存の moveCardToFoundation が動くようになる！
+            if (data.source.type === 'tableau') {
+                gameState.selectedCard = { player: 'player', col: data.source.col, row: data.source.row };
+                moveCardToFoundation(i);
+            } else if (data.source.type === 'waste') {
+                moveWasteToFoundation(i);
+            }
         });
         
-        // Click event (for non-drag devices)
+        // Click event (スマホ/PC共通のタップ対応)
         foundation.addEventListener('click', (e) => {
-            // Prevent event from bubbling up to parent elements
-            e.stopPropagation();
-            
-            // If a card is selected, move it to foundation
-            if (gameState.selectedCard) {
-                moveCardToFoundation(i);
-            } else {
-                // Otherwise, try to move from waste
-                moveWasteToFoundation(i);
-            }
-        });
-        
-        // Touch event (for mobile devices)
-        foundation.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            
-            // If a card is selected, move it to foundation
-            if (gameState.selectedCard) {
-                moveCardToFoundation(i);
-            } else {
-                // Otherwise, try to move from waste
-                moveWasteToFoundation(i);
-            }
+             e.stopPropagation();
+             if (gameState.selectedCard) {
+                 moveCardToFoundation(i);
+             } else {
+                 moveWasteToFoundation(i);
+             }
         });
     }
 }
@@ -953,42 +956,76 @@ function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         
-        // Allow drop
-        tableauColumn.addEventListener('dragover', (e) => {
-            e.preventDefault();
+        foundation.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Allow drop
+            e.dataTransfer.dropEffect = 'move';
         });
         
-        // Handle drop
         tableauColumn.addEventListener('drop', (e) => {
             e.preventDefault();
-            const cardData = e.dataTransfer.getData('text/plain');
-            const card = JSON.parse(cardData);
+            const json = e.dataTransfer.getData('text/plain');
+            if (!json) return;
             
-            // Move card to tableau column
-            moveCardToTableau(col);
+            const data = JSON.parse(json);
+            
+            // 場札へのドロップ処理
+            if (data.source.type === 'tableau') {
+                // 複数選択の場合も考慮してセット
+                // (とりあえず単体選択としてセットして、move関数内で処理させる)
+                gameState.selectedCard = { player: 'player', col: data.source.col, row: data.source.row };
+                
+                // もし「列の途中」を掴んでいた場合の処理が必要ならここで isMulti を判定するが
+                // 一旦シンプルに moveCardToTableau に任せる
+                moveCardToTableau(col);
+            } else if (data.source.type === 'waste') {
+                 // 捨て札から場札への移動関数がないので、既存ロジックで対応できるか確認
+                 // moveCardToTableau は tableau間の移動前提っぽいので、
+                 // Wasteからの移動ロジックを追加する必要があるかも。
+                 // とりあえず今回は「tableau間」の移動を優先して修正。
+                 
+                 // ★WasteからTableauへの移動を追加するならここ★
+                 const card = gameState.player.waste[gameState.player.waste.length - 1];
+                 if (canMoveToTableau(gameState.player.tableau[col], card)) {
+                     gameState.player.waste.pop();
+                     gameState.player.tableau[col].push(card);
+                     renderGame();
+                 }
+            }
         });
         
-        // Click event (for non-drag devices)
         tableauColumn.addEventListener('click', (e) => {
-            // Prevent event from bubbling up to parent elements
-            e.stopPropagation();
-            
-            // Check if a card is selected
-            if (gameState.selectedCard) {
-                moveCardToTableau(col);
-            }
-        });
-        
-        // Touch event (for mobile devices)
-        tableauColumn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            
-            // Check if a card is selected
-            if (gameState.selectedCard) {
-                moveCardToTableau(col);
-            }
+             e.stopPropagation();
+             if (gameState.selectedCard) moveCardToTableau(col);
         });
     }
+}
+
+// ★スマートムーブ関数（タップで組札か、他の列の空き場所に移動）
+function attemptSmartMove(col, row) {
+    const card = gameState.player.tableau[col][row];
+    
+    // 1. まず組札(右上の4枠)に行けるか？
+    for (let i = 0; i < 4; i++) {
+        if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+            gameState.selectedCard = { player: 'player', col, row };
+            moveCardToFoundation(i);
+            return true;
+        }
+    }
+    
+    // 2. 組札が無理なら、他の列(Tableau)に行けるか？
+    // (Kなら空の列へ、それ以外なら数字がつながる列へ)
+    for (let targetCol = 0; targetCol < 7; targetCol++) {
+        if (col === targetCol) continue; // 同じ列は無視
+        
+        if (canMoveToTableau(gameState.player.tableau[targetCol], card)) {
+             gameState.selectedCard = { player: 'player', col, row };
+             moveCardToTableau(targetCol);
+             return true;
+        }
+    }
+    
+    return false;
 }
 
 // Mirintea's AI logic
