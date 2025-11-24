@@ -572,21 +572,16 @@ function createCardElement(card, hideDetails = false) {
     const cardElement = document.createElement('div');
     cardElement.className = `card ${card.color}`;
     
-    // Debug: Log the card information
-    console.log('Creating card element:', card);
-    
     // Make card draggable
     cardElement.draggable = true;
     
     // Add drag start event
     cardElement.addEventListener('dragstart', (e) => {
-        console.log('Drag start:', card);
         e.dataTransfer.setData('text/plain', JSON.stringify(card));
     });
     
     // Add touch events for mobile devices
     cardElement.addEventListener('touchstart', (e) => {
-        console.log('Touch start:', card);
         // Prevent scrolling when touching cards
         e.preventDefault();
         
@@ -595,7 +590,6 @@ function createCardElement(card, hideDetails = false) {
     });
     
     cardElement.addEventListener('touchend', (e) => {
-        console.log('Touch end:', card);
         // Find the drop target
         const touch = e.changedTouches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -621,13 +615,6 @@ function createCardElement(card, hideDetails = false) {
             const imagePath = `cards/${fileName}.png`;  // Changed to relative path
             cardElement.style.backgroundImage = `url('${imagePath}')`;
             cardElement.style.backgroundSize = 'cover';
-            // Debug: Log the image path
-            console.log('Card image path (opponent):', imagePath);
-            // Additional debug: Check if image exists
-            const img = new Image();
-            img.onload = () => console.log('Image loaded successfully:', imagePath);
-            img.onerror = () => console.error('Failed to load image:', imagePath);
-            img.src = imagePath;
         } else {
             cardElement.classList.add('back');
         }
@@ -640,13 +627,6 @@ function createCardElement(card, hideDetails = false) {
             const imagePath = `cards/${fileName}.png`;  // Changed to relative path
             cardElement.style.backgroundImage = `url('${imagePath}')`;
             cardElement.style.backgroundSize = 'cover';
-            // Debug: Log the image path
-            console.log('Card image path (player):', imagePath);
-            // Additional debug: Check if image exists
-            const img = new Image();
-            img.onload = () => console.log('Image loaded successfully:', imagePath);
-            img.onerror = () => console.error('Failed to load image:', imagePath);
-            img.src = imagePath;
         } else {
             cardElement.classList.add('back');
         }
@@ -795,7 +775,6 @@ function addFoundationEventListeners() {
             e.preventDefault();
             const cardData = e.dataTransfer.getData('text/plain');
             const card = JSON.parse(cardData);
-            console.log('Dropped card on foundation:', card);
             
             // Move card to foundation
             moveCardToFoundation(i);
@@ -841,14 +820,17 @@ function addTableauEventListeners() {
             e.preventDefault();
             const cardData = e.dataTransfer.getData('text/plain');
             const card = JSON.parse(cardData);
-            console.log('Dropped card on tableau:', card);
             
             // Move card to tableau column
             moveCardToTableau(col);
         });
         
         // Click event (for non-drag devices)
-        tableauColumn.addEventListener('click', () => moveCardToTableau(col));
+        tableauColumn.addEventListener('click', (e) => {
+            // Prevent event from bubbling up to parent elements
+            e.stopPropagation();
+            moveCardToTableau(col);
+        });
         
         // Touch event (for mobile devices)
         tableauColumn.addEventListener('touchend', (e) => {
@@ -1071,7 +1053,19 @@ function renderTableau() {
             cardElement.style.top = `${row * 20}px`;
             
             // Add click event to select card
-            cardElement.addEventListener('click', () => selectCard('player', col, row));
+            cardElement.addEventListener('click', (e) => {
+                // 1. 重要：カードを押した時、裏の列までクリックが貫通しないように止める！
+                e.stopPropagation();
+                
+                // 2. カードを選択状態にする
+                selectCard('player', col, row);
+
+                // 3. 【新機能】一番手前のカードなら、自動で右上の組札に飛ぶかチェック！
+                // これで「A」とかをタップするだけでシュッと飛んでいくよ！
+                if (row === gameState.player.tableau[col].length - 1) {
+                    tryAutoMoveToFoundation(col, row);
+                }
+            });
             
             tableauColumn.appendChild(cardElement);
         }
@@ -1092,6 +1086,22 @@ function renderTableau() {
             tableauColumn.appendChild(cardElement);
         }
     }
+}
+
+// ★この新しい関数を追加してね！★
+// カードをクリックした時、自動で組札（Foundation）に移動させる便利機能
+function tryAutoMoveToFoundation(col, row) {
+    const card = gameState.player.tableau[col][row];
+    
+    // 4つの組札置き場（ハート、ダイヤ、クラブ、スペード）を全部チェック
+    for (let i = 0; i < 4; i++) {
+        if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+            // 移動できる場所を見つけたら、即座に移動！
+            moveCardToFoundation(i);
+            return true; // 移動成功！
+        }
+    }
+    return false; // 移動できなかった
 }
 
 // Add click event listeners to tableau columns
