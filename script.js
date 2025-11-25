@@ -877,8 +877,9 @@ function createCardElement(card, hideDetails = false, source = null) {
     return cardElement;
 }
 // Draw a card from stock (Player)
+// 修正：山札切れの時の挙動を標準的なソリティアに合わせつつ、本当にない時だけシャッフル
 function drawFromStock() {
-    // console.log('Drawing from stock');
+    // 1. 山札にカードがあるなら普通に引く
     if (gameState.player.stock.length > 0) {
         const card = gameState.player.stock.pop();
         card.faceUp = true;
@@ -888,9 +889,25 @@ function drawFromStock() {
         
         if (checkWinCondition('player')) showGameOver(true);
 
-    } else {
-        // ★変更：ストックが空になったら、捨て札をただ戻すんじゃなくて、
-        // 必ず「裏向きカード回収＆シャッフル」を行うように変更！
+    } 
+    // 2. 山札は空だけど、捨て札(Waste)はある場合 → 捨て札を山札に戻す（リサイクル）
+    else if (gameState.player.waste.length > 0) {
+        // 捨て札を全て回収して山札へ（順番は逆になるので注意）
+        while (gameState.player.waste.length > 0) {
+            const card = gameState.player.waste.pop();
+            card.faceUp = false; // 裏向きに戻す
+            gameState.player.stock.push(card);
+        }
+        // ここで「山札再セット完了！」みたいな音とか出してもいいかも
+        updatePlayerScreen();
+    }
+    // 3. 山札も捨て札も空っぽの場合 → 本当にカードがない！
+    else {
+        // ここで初めて「詰み防止シャッフル」を発動させるか、
+        // あるいは「もうカードないよ！」って言わせるか。
+        // 今の仕様ならここでautoShuffleを呼んでもいいけど、
+        // 頻発するとウザいので、トリックボタンに任せるのもアリ。
+        // 一応、救済として呼ぶならこう↓
         autoShufflePlayer();
     }
 }
