@@ -816,30 +816,6 @@ function createCardElement(card, hideDetails = false, source = null) {
     return cardElement;
 }   // ← createCardElement 関数終了！これで関数が終わる！！！
 
-    // 画像設定（これ以降は関数外に出てたせいでエラーだった）
-    if (hideDetails) {
-        if (card.faceUp) {
-            cardElement.classList.add('face-up');
-            const fileName = getCardFileName(card);
-            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-            cardElement.style.backgroundSize = 'cover';
-        } else {
-            cardElement.classList.add('back');
-        }
-    } else {
-        if (card.faceUp) {
-            cardElement.classList.add('face-up');
-            const fileName = getCardFileName(card);
-            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-            cardElement.style.backgroundSize = 'cover';
-        } else {
-            cardElement.classList.add('back');
-        }
-    }
-    
-    return cardElement;
-}   // ← createCardElement の閉じ括弧もちゃんとある！！
-
 // Draw a card from stock
 function drawFromStock() {
     console.log('Drawing from stock');
