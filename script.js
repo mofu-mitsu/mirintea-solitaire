@@ -1247,7 +1247,7 @@ function mirinteaAI() {
     }
     
     if (!moved) {
-        for (let fromCol = 0; fromCol < 7; col++) {
+        for (let fromCol = 0; fromCol < 7; fromCol++) {
             if (gameState.mirintea.tableau[fromCol].length > 0) {
                 const card = gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1];
                 for (let toCol = 0; toCol < 7; toCol++) {
