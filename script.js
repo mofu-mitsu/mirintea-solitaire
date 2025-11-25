@@ -303,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeBtn').addEventListener('click', () => {
         mirinteaWindow.style.display = 'none';  // toggle → hide に変更
     });
+}); // ★★★ ここに }); を追加して閉じる！ ★★★
 
 // Function to toggle Mirintea window visibility
 function toggleMirinteaWindow() {
@@ -318,10 +319,11 @@ function makeDraggable(element) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     
     // PC用のドラッグ操作
-    element.querySelector('.drag-handle').onmousedown = dragMouseDown;
-    
-    // スマホ用のドラッグ操作
-    element.querySelector('.drag-handle').ontouchstart = dragTouchStart;
+    const dragHandle = element.querySelector('.drag-handle'); // エラー防止のため変数化推奨
+    if(dragHandle) {
+        dragHandle.onmousedown = dragMouseDown;
+        dragHandle.ontouchstart = dragTouchStart;
+    }
     
     function dragMouseDown(e) {
         e.preventDefault();
@@ -334,7 +336,7 @@ function makeDraggable(element) {
     }
     
     function dragTouchStart(e) {
-        e.preventDefault();
+        // e.preventDefault(); // スマホでスクロールできなくなる場合があるので注意（状況による）
         const touch = e.touches[0];
         // Get the touch position at startup
         pos3 = touch.clientX;
@@ -357,7 +359,7 @@ function makeDraggable(element) {
     }
     
     function elementTouchMove(e) {
-        e.preventDefault();
+        // e.preventDefault();
         const touch = e.touches[0];
         // Calculate the new touch position
         pos1 = pos3 - touch.clientX;
