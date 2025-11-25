@@ -917,17 +917,88 @@ function drawFromStock() {
         updatePlayerScreen();
         if (checkWinCondition('player')) showGameOver(true);
     } 
-    // 2. 山札が空っぽなら -> ★全回収シャッフル発動！
+    // 2. 山札が空っぽなら -> ★今回の新しいシャッフル発動！
     else {
-        // みりんてゃのセリフ
-        mirinteaDialogue.textContent = "手詰まり？全部混ぜ直してあげるっ！♡";
-        updateMirinteaImage('doka'); // 応援モード
+        // 捨て札も無いなら何もしない（本当に何もない時）
+        if (gameState.player.waste.length === 0) return;
+
+        // フェア・シャッフル実行！
+        performFairShuffle('player');
         
-        // ★ここで最強のシャッフルを呼ぶ！
-        autoShufflePlayer();
+        // シャッフル演出音とか入れたらもっと良さそう！
+        showRandomDialogue('shuffle'); 
     }
 }
 
+// ==========================================
+// ★公平なシャッフル機能（プレイヤー・みりんてゃ共通）
+// ==========================================
+function performFairShuffle(who) {
+    const state = gameState[who];
+    const collect = [];
+    const slotsToFill = []; // 場札の「裏向きカード」が何枚あったかメモする場所
+
+    console.log(`[Shuffle] ${who}のデッキと裏向きカードを回収して混ぜます！`);
+
+    // 1. 捨て札(Waste)を全回収
+    while (state.waste.length > 0) {
+        const card = state.waste.pop();
+        card.faceUp = false; // 裏に戻す
+        collect.push(card);
+    }
+
+    // 2. 山札(Stock)を全回収
+    while (state.stock.length > 0) {
+        collect.push(state.stock.pop());
+    }
+
+    // 3. 場札(Tableau)の「裏向きカード」だけを引っこ抜く！
+    // ※表向きのカード（積み上げてるやつ）はそのまま残すよ！
+    for (let col = 0; col < 7; col++) {
+        const pile = state.tableau[col];
+        let faceDownCount = 0;
+        
+        // 下から順にチェックして、裏向きなら回収
+        // (配列の先頭0番目が一番奥のカード)
+        while (pile.length > 0 && !pile[0].faceUp) {
+            collect.push(pile.shift()); // 先頭から抜く
+            faceDownCount++;
+        }
+        slotsToFill[col] = faceDownCount; // この列には〇〇枚戻せばいいんだな、ってメモ
+    }
+
+    // 4. 回収したカードを豪快にシャッフル！
+    shuffleArray(collect);
+
+    // 5. 元あった場所に「裏向き」で戻す（中身は入れ替わってる！）
+    for (let col = 0; col < 7; col++) {
+        const count = slotsToFill[col];
+        for (let i = 0; i < count; i++) {
+            if (collect.length > 0) {
+                const card = collect.pop();
+                card.faceUp = false;
+                // unshiftで「配列の先頭（一番奥）」に差し込む
+                state.tableau[col].unshift(card);
+            }
+        }
+    }
+
+    // 6. 残りを新しい山札(Stock)にする
+    while (collect.length > 0) {
+        state.stock.push(collect.pop());
+    }
+
+    // 画面更新！
+    if (who === 'player') {
+        updatePlayerScreen();
+        // シャッフルしたよ！ってセリフ
+        mirinteaDialogue.textContent = "手詰まり？カード全部混ぜ直したから、これでいけるっしょ！♡";
+        updateMirinteaImage('doka');
+    } else {
+        updateMirinteaScreen();
+        console.log("みりんてゃ: シャッフル完了！");
+    }
+}
 
 // ★プレイヤー専用シャッフル関数（完全配り直し版）
 function autoShufflePlayer() {
@@ -1385,26 +1456,17 @@ function attemptSmartMove(col, row) {
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // --- A. 山札補充（リサイクル） ---
+    // --- A. 山札補充（リサイクル & シャッフル） ---
     // 山札が空で、捨て札があるなら
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
         
-        console.log("みりんてゃ: 山札切れ。リサイクルするか検討中...");
+        console.log("みりんてゃ: 山札切れ。シャッフルタイム！");
         
-        // ★ここで検品！
-        if (hasUsefulCard(gameState.mirintea.waste, 'mirintea')) {
-            console.log("みりんてゃ: まだ使えるカードがあるからリサイクル！");
-            while (gameState.mirintea.waste.length > 0) {
-                const card = gameState.mirintea.waste.pop();
-                card.faceUp = false;
-                gameState.mirintea.stock.push(card);
-            }
-            updateMirinteaScreen();
-        } else {
-            console.log("みりんてゃ: 使えるカードがないからシャッフル！");
-            autoShuffleMirintea();
-        }
-        return; // このターンは補充orシャッフルで終わり
+        // ★ここを新しい関数に変えるだけ！
+        // これでみりんてゃも裏向きカードを含めてシャッフルするようになるよ
+        performFairShuffle('mirintea');
+        
+        return; // このターンはシャッフルでおしまい
     }
 
     // --- B. 詰み防止トリック（本当に何もできない時だけ） ---
