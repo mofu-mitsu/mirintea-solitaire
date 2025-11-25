@@ -905,41 +905,45 @@ function createCardElement(card, hideDetails = false, source = null) {
 
     return cardElement;
 }
-// Draw a card from stock (Player)
-// Draw a card from stock (Player)
-// 修正版：リサイクル時に有効なカードがなければ即シャッフル！
+// Draw a card from stock
 function drawFromStock() {
-    // 1. 山札があるなら普通に引く
+    // 1. 山札があるなら引く
     if (gameState.player.stock.length > 0) {
         const card = gameState.player.stock.pop();
         card.faceUp = true;
         gameState.player.waste.push(card);
-        updatePlayerScreen(); 
         
+        updatePlayerScreen();
         if (checkWinCondition('player')) showGameOver(true);
     } 
-    // 2. 山札が空なら、捨て札を山札に戻す前にチェック！
+    // 2. 山札が空で、捨て札があるなら -> ★即シャッフルして山札に戻す！
     else if (gameState.player.waste.length > 0) {
         
-        // ★ここでさっきの検品関数を使う！
-        if (hasUsefulCard(gameState.player.waste, 'player')) {
-            console.log("使えるカードがあるからリサイクルするよ！");
-            while (gameState.player.waste.length > 0) {
-                const card = gameState.player.waste.pop();
-                card.faceUp = false; 
-                gameState.player.stock.push(card);
-            }
-            updatePlayerScreen();
-        } else {
-            console.log("使えるカードがないから強制シャッフル！");
-            mirinteaDialogue.textContent = "あ、もう使えるカードないね！シャッフルしよ！♡";
-            updateMirinteaImage('doka'); 
-            autoShufflePlayer();
+        // みりんてゃのセリフ
+        mirinteaDialogue.textContent = "山札切れたね！シャッフルしてあげる♡";
+        updateMirinteaImage('doka'); // 応援モード
+        
+        // 捨て札を全部回収
+        const collectedCards = [];
+        while (gameState.player.waste.length > 0) {
+            const card = gameState.player.waste.pop();
+            card.faceUp = false; // 裏向きに戻す
+            collectedCards.push(card);
         }
+        
+        // ★ここでシャッフル！
+        shuffleArray(collectedCards);
+        
+        // 山札に戻す
+        gameState.player.stock.push(...collectedCards);
+        
+        // SEとか鳴らすならここ
+        showRandomDialogue('shuffle');
+        updatePlayerScreen();
     }
-    // 3. どっちも空っぽなら
+    // 3. 完全にカードがない場合
     else {
-        mirinteaDialogue.textContent = "カードなくなっちゃったね…トリック使ってみる？♡";
+        mirinteaDialogue.textContent = "もうカードないよ〜？詰んじゃった？♡";
         updateMirinteaImage('shy');
     }
 }
@@ -1309,28 +1313,31 @@ function addFoundationEventListeners() {
 }
 
 // Add drag and drop event listeners to tableau columns
-// Add drag and drop event listeners to tableau columns
 function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         
-        // 列自体へのドラッグ処理
-        // ★ここ追加：dragenterでも拒否しないようにする
-        tableauColumn.addEventListener('dragenter', (e) => {
-            e.preventDefault();
+        // ★修正：dragoverで確実に許可を出す！
+        tableauColumn.addEventListener('dragover', (e) => {
+            e.preventDefault(); // 必須：これがないと禁止マークになる
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move'; // カーソルを「移動」にする
+            return false;
         });
 
-        tableauColumn.addEventListener('dragover', (e) => {
+        // dragenterも念のため許可
+        tableauColumn.addEventListener('dragenter', (e) => {
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
+            e.stopPropagation();
         });
         
         tableauColumn.addEventListener('drop', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             handleDropOnTableau(e, col);
         });
         
-        // 列の背景クリックで移動（K用）
+        // 背景クリックで移動（K用）
         tableauColumn.addEventListener('click', (e) => {
              e.stopPropagation();
              if (gameState.selectedCard) moveCardToTableau(col);
@@ -1651,27 +1658,26 @@ function moveWasteToFoundation(foundationIndex) {
 
 // Update the renderTableau function
 function renderTableau() {
-    // Render player tableau
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         tableauColumn.innerHTML = '';
         
+        // ★修正ポイント：空っぽの列でもドラッグ判定が効くように、見えない壁を作る！
+        tableauColumn.style.minHeight = '150px'; // カード1枚分くらいの高さを確保
+        tableauColumn.style.width = '100%';      // 幅もしっかり確保
+        tableauColumn.style.position = 'relative'; // 位置基準にする
+        // デバッグ用に薄い色をつけてもいいけど、本番は透明でOK
+        
         for (let row = 0; row < gameState.player.tableau[col].length; row++) {
             const card = gameState.player.tableau[col][row];
-            
-            // ★ここで「このカードは col列目の row番目だよ」という情報を渡す！
             const sourceInfo = { type: 'tableau', col: col, row: row };
             const cardElement = createCardElement(card, false, sourceInfo);
             
-            // Position cards vertically
-            cardElement.style.top = `${row * 20}px`;
+            cardElement.style.top = `${row * 30}px`; // 間隔調整
             
-            // クリックイベント（PC用）
             cardElement.addEventListener('click', (e) => {
                 e.stopPropagation();
-                // まず選択状態にする
                 selectCard('player', col, row);
-                // その後、自動移動（スマートムーブ）を試みる
                 if (row === gameState.player.tableau[col].length - 1) {
                     attemptSmartMove(col, row);
                 }
@@ -1680,6 +1686,11 @@ function renderTableau() {
             tableauColumn.appendChild(cardElement);
         }
     }
+    
+    // みりんてゃ側も同様に描画（変更なし）
+    renderMirinteaTableau();
+}
+
     
     // Render Mirintea tableau
     for (let col = 0; col < 7; col++) {
