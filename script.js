@@ -305,6 +305,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 }); 
 
+// Helper: Check if any card in the list can be moved to foundation or tableau
+// カードの束の中に、有効な手があるかチェックする検品係
+function hasUsefulCard(cards, player) {
+    const foundations = gameState[player].foundations;
+    const tableau = gameState[player].tableau;
+
+    for (const card of cards) {
+        // 組札に置ける？
+        for (let i = 0; i < 4; i++) {
+            if (canMoveToFoundation(foundations[i], card)) return true;
+        }
+        // 場札に置ける？
+        for (let col = 0; col < 7; col++) {
+            if (canMoveToTableau(tableau[col], card)) return true;
+        }
+    }
+    return false;
+}
+
 // Function to toggle Mirintea window visibility
 function toggleMirinteaWindow() {
     if (mirinteaWindow.style.display === 'none') {
@@ -877,6 +896,7 @@ function createCardElement(card, hideDetails = false, source = null) {
     return cardElement;
 }
 // Draw a card from stock (Player)
+// 修正版：リサイクル時に有効なカードがなければ即シャッフル！
 function drawFromStock() {
     // 1. 山札があるなら普通に引く
     if (gameState.player.stock.length > 0) {
@@ -887,24 +907,32 @@ function drawFromStock() {
         
         if (checkWinCondition('player')) showGameOver(true);
     } 
-    // 2. 山札が空なら、捨て札をひっくり返して補充（リサイクル）
+    // 2. 山札が空なら、捨て札を山札に戻す前にチェック！
     else if (gameState.player.waste.length > 0) {
-        while (gameState.player.waste.length > 0) {
-            const card = gameState.player.waste.pop();
-            card.faceUp = false; // 裏向きに戻す
-            gameState.player.stock.push(card);
+        
+        // ★ここが新機能！「捨て札の中に使えるカードある？」って聞く
+        if (hasUsefulCard(gameState.player.waste, 'player')) {
+            // あるなら通常通りリサイクル
+            while (gameState.player.waste.length > 0) {
+                const card = gameState.player.waste.pop();
+                card.faceUp = false; 
+                gameState.player.stock.push(card);
+            }
+            updatePlayerScreen();
+        } else {
+            // ★ないなら、戻しても意味ないので強制シャッフル発動！
+            mirinteaDialogue.textContent = "あ、もう使えるカードないね！シャッフルしよ！♡";
+            updateMirinteaImage('doka'); // ドヤ顔で教えてあげる
+            autoShufflePlayer();
         }
-        // 音とか鳴らすならここ
-        updatePlayerScreen();
     }
     // 3. どっちも空っぽなら
     else {
-        // ここでは何もしない（クリックしても無反応）
-        // または「カードがないよ！」ってトースト表示してもいい
-        // 本当の手詰まり判定は shuffleWhenStuck に任せる
+        // ここはautoShufflePlayerに任せるか、トリックを促す
+        mirinteaDialogue.textContent = "カードなくなっちゃったね…トリック使ってみる？♡";
+        updateMirinteaImage('shy');
     }
 }
-
 // ★プレイヤー専用シャッフル関数（修正版）
 function autoShufflePlayer() {
     const collect = [];
@@ -1368,27 +1396,33 @@ function attemptSmartMove(col, row) {
 
 
 // ==========================================
-// 1. みりんてゃAI（安全装置付き・完全版）
+// 1. みりんてゃAI（検品機能付き・完全版）
 // ==========================================
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
     // --- A. 山札補充（リサイクル） ---
-    // 山札が空で、捨て札があるなら、捨て札を山札に戻す（標準ルール）
+    // 山札が空で、捨て札があるなら
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
-        // 捨て札を全部回収して山札へ
-        while (gameState.mirintea.waste.length > 0) {
-            const card = gameState.mirintea.waste.pop();
-            card.faceUp = false; // 裏向きに戻す
-            gameState.mirintea.stock.push(card);
+        
+        // ★みりんてゃも検品！
+        if (hasUsefulCard(gameState.mirintea.waste, 'mirintea')) {
+            // 使えるカードがあるなら補充
+            while (gameState.mirintea.waste.length > 0) {
+                const card = gameState.mirintea.waste.pop();
+                card.faceUp = false;
+                gameState.mirintea.stock.push(card);
+            }
+            updateMirinteaScreen();
+        } else {
+            // ★ないならシャッフル！
+            autoShuffleMirintea();
         }
-        updateMirinteaScreen();
-        return; // このターンは補充で終わり
+        return; 
     }
 
     // --- B. 詰み防止トリック（本当に何もできない時だけ） ---
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
-        // 場札に裏向きカードがあるなら、無理やり1枚めくる
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
             for (let i = pile.length - 1; i >= 0; i--) {
@@ -1399,13 +1433,15 @@ function mirinteaAI() {
                 }
             }
         }
-        return; // 本当に何もないなら何もしない
+        // ここまで来たら本当に手詰まり。shuffleWhenStuckに任せる
+        return; 
     }
 
+    // （↓ここから下のロジックは前回のままでOK！）
     let moved = false;
     let foundFoundationMove = true;
-    let safetyCount = 0; // ★無限ループ防止の安全装置
-
+    let safetyCount = 0; 
+    
     // --- ① 組札（ゴール）への移動（連続で置くけど、最大10回まで！） ---
     while (foundFoundationMove && safetyCount < 10) {
         foundFoundationMove = false;
