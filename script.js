@@ -564,8 +564,11 @@ function renderGame() {
 
 // Update ONLY Player's board (call this when player moves)
 function updatePlayerScreen() {
-    renderPlayerBoard();
-    renderPlayerTableau();
+    // ブラウザの描画タイミングに合わせて実行（ラグ対策）
+    requestAnimationFrame(() => {
+        renderPlayerBoard();
+        renderPlayerTableau();
+    });
 }
 
 // Update ONLY Mirintea's board (call this when Mirintea moves)
@@ -580,15 +583,18 @@ function renderPlayerTableau() {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         tableauColumn.innerHTML = '';
         
-        // ★修正：空の列でも当たり判定を持つように高さを強制確保
-        // Kをドラッグで置くために必須！
-        tableauColumn.style.minHeight = '150px'; 
+        // ★修正：スマホ対策で高さを画面比率(vh)で指定
+        // これで短くならずに、タップ判定もしやすくなるはず！
+        tableauColumn.style.minHeight = '30vh'; 
+        tableauColumn.style.paddingBottom = '50px'; // 下に少し余裕を持たせる
         
         for (let row = 0; row < gameState.player.tableau[col].length; row++) {
             const card = gameState.player.tableau[col][row];
             const sourceInfo = { type: 'tableau', col: col, row: row };
             const cardElement = createCardElement(card, false, sourceInfo);
-            cardElement.style.top = `${row * 20}px`;
+            
+            // 重なり具合の調整（少し詰め気味にするとスマホで見やすいかも）
+            cardElement.style.top = `${row * 25}px`; // 間隔を少し広げた(20->25)
             
             cardElement.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -877,57 +883,62 @@ function drawFromStock() {
         card.faceUp = true;
         gameState.player.waste.push(card);
         
-        updatePlayerScreen(); // ★ここ変更：プレイヤー画面だけ更新
+        updatePlayerScreen(); 
         
         if (checkWinCondition('player')) showGameOver(true);
 
     } else {
-        // ストックが空なら、Wasteを戻すか、裏向きカードを回収してシャッフル
+        // ★変更：ストックが空になったら、捨て札をただ戻すんじゃなくて、
+        // 必ず「裏向きカード回収＆シャッフル」を行うように変更！
         autoShufflePlayer();
     }
 }
 
-// ★プレイヤー専用シャッフル関数（独立化）
+// ★プレイヤー専用シャッフル関数（強化版）
 function autoShufflePlayer() {
-    // 1. WasteがあればStockに戻す（通常のソリティアの挙動）
-    if (gameState.player.waste.length > 0) {
-        while (gameState.player.waste.length > 0) {
-            const card = gameState.player.waste.pop();
-            card.faceUp = false;
-            gameState.player.stock.push(card);
-        }
-        updatePlayerScreen();
-        return;
+    const collect = [];
+
+    // 1. まず捨て札(Waste)を全部回収
+    while (gameState.player.waste.length > 0) {
+        const card = gameState.player.waste.pop();
+        card.faceUp = false; // 裏向きに戻す
+        collect.push(card);
     }
 
-    // 2. WasteもStockもない場合、場札の裏向きカードを回収（特別ルール）
-    const collect = [];
+    // 2. 場札(Tableau)の裏向きカードも全部回収
     for (let col = 0; col < 7; col++) {
         const pile = gameState.player.tableau[col];
+        // 後ろからチェックしないとインデックスずれるので注意
         for (let i = 0; i < pile.length; i++) {
             if (!pile[i].faceUp) {
                 collect.push(pile[i]);
                 pile.splice(i, 1);
-                i--;
+                i--; 
             } else {
-                break;
+                break; // 表向きが出たらその列は終了
             }
         }
     }
 
+    // 3. 回収したカードがあればシャッフルしてストックへ
     if (collect.length > 0) {
-        shuffleArray(collect);
+        shuffleArray(collect); // 混ぜる！
         gameState.player.stock.push(...collect);
         
-        // 場札の新しいトップを表にする
+        // 場札の列が空っぽになったり、裏向きがなくなった列のトップを表にする
         for (let col = 0; col < 7; col++) {
             const pile = gameState.player.tableau[col];
             if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
                 pile[pile.length - 1].faceUp = true;
             }
         }
+        
         showRandomDialogue('shuffle');
-        updatePlayerScreen(); // ★プレイヤー画面だけ更新
+        updatePlayerScreen();
+    } else {
+        // 万が一回収できるカードが一切ない（全部表向きで詰んだ）場合
+        // ここでゲームオーバー判定してもいいけど、とりあえずそのまま
+        updatePlayerScreen();
     }
 }
 
