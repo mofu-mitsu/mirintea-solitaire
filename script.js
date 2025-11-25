@@ -303,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeBtn').addEventListener('click', () => {
         mirinteaWindow.style.display = 'none';  // toggle → hide に変更
     });
-}); // ← ★★★ これを追加するだけ！！ ★★★
+}); 
 
 // Function to toggle Mirintea window visibility
 function toggleMirinteaWindow() {
