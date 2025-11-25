@@ -1691,24 +1691,6 @@ function renderTableau() {
     renderMirinteaTableau();
 }
 
-    
-    // Render Mirintea tableau
-    for (let col = 0; col < 7; col++) {
-        const tableauColumn = document.getElementById(`mirintea-tableau-${col}`);
-        tableauColumn.innerHTML = '';
-        
-        for (let row = 0; row < gameState.mirintea.tableau[col].length; row++) {
-            const card = gameState.mirintea.tableau[col][row];
-            const cardElement = createCardElement(card, true); // Hide card details for Mirintea
-            
-            // Position cards vertically
-            cardElement.style.top = `${row * 20}px`;
-            
-            tableauColumn.appendChild(cardElement);
-        }
-    }
-}
-
 // Add click event listeners to tableau columns
 function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
