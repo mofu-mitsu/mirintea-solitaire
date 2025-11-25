@@ -1375,15 +1375,16 @@ function attemptSmartMove(col, row) {
 
 
 // ==========================================
-// 1. みりんてゃAI（修正版：ちゃんと場札に置くよ！）
+// 1. みりんてゃAI（修正版：連続で組札に置くよ！＆手持ちも使うよ！）
 // ==========================================
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // ストック＆廃棄札が空ならトリック（裏技）
+    // --- A. ストック＆廃棄札が空ならトリック（裏技：詰み防止） ---
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
+            // 裏向きカードがあれば無理やり表にする
             for (let i = pile.length - 1; i >= 0; i--) {
                 if (!pile[i].faceUp) {
                     pile[i].faceUp = true;
@@ -1395,7 +1396,7 @@ function mirinteaAI() {
         return;
     }
 
-    // ストック切れ補充
+    // --- B. ストック切れ補充（捨て札を山札に戻す） ---
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
         while (gameState.mirintea.waste.length > 0) {
             const card = gameState.mirintea.waste.pop();
@@ -1407,42 +1408,57 @@ function mirinteaAI() {
     }
 
     let moved = false;
+    let foundFoundationMove = true;
 
-    // --- ① 組札（ゴール）への移動を最優先 ---
-    
-    // Waste -> Foundation
-    if (gameState.mirintea.waste.length > 0) {
-        const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
-        for (let i = 0; i < 4; i++) {
-            if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                gameState.mirintea.foundations[i].push(gameState.mirintea.waste.pop());
-                moved = true;
-                updateMirinteaScreen();
-                return; 
-            }
-        }
-    }
-    
-    // Tableau -> Foundation
-    for (let col = 0; col < 7; col++) {
-        if (gameState.mirintea.tableau[col].length > 0) {
-            const card = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
+    // --- ① 組札（ゴール）への移動を最優先（ループで置けるだけ置く！） ---
+    // ※ここが強化ポイント！1ターンに1枚じゃなく、置ける限り連続で置く！
+    while (foundFoundationMove) {
+        foundFoundationMove = false; // 一旦フラグを下ろす
+
+        // 1-1. 手持ち(Waste) -> 組札(Foundation)
+        if (gameState.mirintea.waste.length > 0) {
+            const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
             for (let i = 0; i < 4; i++) {
                 if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                    gameState.mirintea.foundations[i].push(gameState.mirintea.tableau[col].pop());
-                    if (gameState.mirintea.tableau[col].length > 0 && !gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp) {
-                        gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp = true;
-                    }
+                    gameState.mirintea.foundations[i].push(gameState.mirintea.waste.pop());
                     moved = true;
+                    foundFoundationMove = true; // まだ置けるかも！ループ継続
                     updateMirinteaScreen();
-                    return; 
+                    break; // このforを抜けてwhileの最初に戻る
                 }
+            }
+            if (foundFoundationMove) continue; // moveがあったら次のループへ
+        }
+        
+        // 1-2. 場札(Tableau) -> 組札(Foundation)
+        for (let col = 0; col < 7; col++) {
+            if (gameState.mirintea.tableau[col].length > 0) {
+                const card = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
+                for (let i = 0; i < 4; i++) {
+                    if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
+                        gameState.mirintea.foundations[i].push(gameState.mirintea.tableau[col].pop());
+                        
+                        // めくった下のカードが裏なら表にする
+                        if (gameState.mirintea.tableau[col].length > 0 && !gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp) {
+                            gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp = true;
+                        }
+                        
+                        moved = true;
+                        foundFoundationMove = true; // まだ置けるかも！
+                        updateMirinteaScreen();
+                        break; // Foundationループを抜ける
+                    }
+                }
+                if (foundFoundationMove) break; // Tableauループを抜けてwhileの最初へ
             }
         }
     }
+    
+    // 組札への移動があったなら、このターンはここで終了（一気にやりすぎない演出）
+    if (moved) return;
+
 
     // --- ② 手持ち（Waste）から場札（Tableau）へ ---
-    // ★ここが抜けてたから追加したよ！これで手持ちカードを場に出すようになる！
     if (gameState.mirintea.waste.length > 0) {
         const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
         for (let toCol = 0; toCol < 7; toCol++) {
@@ -1460,8 +1476,7 @@ function mirinteaAI() {
         const fromPile = gameState.mirintea.tableau[fromCol];
         if (fromPile.length === 0) continue;
 
-        // 表向きのカードの束を探す（Kなら束ごと動かすとか）
-        // 簡易的に「一番奥の表向きカード」を取得
+        // 表向きのカードの束を探す
         let firstFaceUpIndex = -1;
         for (let i = 0; i < fromPile.length; i++) {
             if (fromPile[i].faceUp) {
@@ -1473,15 +1488,15 @@ function mirinteaAI() {
 
         const cardToMove = fromPile[firstFaceUpIndex];
 
-        // 移動する意味があるか？（下に裏向きカードがある、または空き列にKを動かしたい）
-        // 下に裏向きがないなら、基本動かさなくていい（無限ループ防止）
+        // 移動する意味があるか判定（下に裏向きカードがある or Kを空き列へ）
         const isWorthMoving = (firstFaceUpIndex > 0 && !fromPile[firstFaceUpIndex - 1].faceUp) || (firstFaceUpIndex === 0 && cardToMove.rank === 'K'); 
         
-        // ただしKの場合は、今の列が既に空き列の先頭なら動かさない
+        // 既に空き列にあるKは動かさない
         if (firstFaceUpIndex === 0 && cardToMove.rank === 'K') continue;
 
         if (!isWorthMoving) continue;
 
+        // 移動先を探す
         for (let toCol = 0; toCol < 7; toCol++) {
             if (fromCol === toCol) continue;
             
@@ -1501,7 +1516,7 @@ function mirinteaAI() {
         }
     }
     
-    // 裏向きカードを表にする
+    // --- ④ 裏向きカードを表にする（もし表になってないのがあれば） ---
     if (!moved) {
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
@@ -1514,7 +1529,7 @@ function mirinteaAI() {
         }
     }
 
-    // --- ④ どこも動かせないなら、山札をめくる ---
+    // --- ⑤ どこも動かせないなら、山札をめくる ---
     if (!moved && gameState.mirintea.stock.length > 0) {
         const card = gameState.mirintea.stock.pop();
         card.faceUp = true;
@@ -1523,6 +1538,7 @@ function mirinteaAI() {
         return;
     }
     
+    // 勝利判定
     if (checkWinCondition('mirintea')) {
         showGameOver(false);
     }
