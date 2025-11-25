@@ -787,8 +787,34 @@ function createCardElement(card, hideDetails = false, source = null) {
                     }
                 }
             }
-        });   // ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←
-              // ← ここに }) が足りなかった！！！！これで関数が終わる！！！
+        });   // ← touchend 閉じた
+
+    }   // ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←
+        // ← これ！！！これが抜けてた！！！ if (!hideDetails && card.faceUp) の閉じ括弧！！！
+
+    // ここから先は createCardElement の普通の処理
+    if (hideDetails) {
+        if (card.faceUp) {
+            cardElement.classList.add('face-up');
+            const fileName = getCardFileName(card);
+            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
+            cardElement.style.backgroundSize = 'cover';
+        } else {
+            cardElement.classList.add('back');
+        }
+    } else {
+        if (card.faceUp) {
+            cardElement.classList.add('face-up');
+            const fileName = getCardFileName(card);
+            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
+            cardElement.style.backgroundSize = 'cover';
+        } else {
+            cardElement.classList.add('back');
+        }
+    }
+    
+    return cardElement;
+}   // ← createCardElement 関数終了！これで関数が終わる！！！
 
     // 画像設定（これ以降は関数外に出てたせいでエラーだった）
     if (hideDetails) {
