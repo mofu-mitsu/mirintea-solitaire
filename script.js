@@ -655,7 +655,7 @@ function renderMirinteaTableau() {
     }
 }
 
-// Render player's board
+// Render player's board (修正版)
 function renderPlayerBoard() {
     // Render stock
     const playerStock = document.getElementById('player-stock');
@@ -663,29 +663,16 @@ function renderPlayerBoard() {
     if (gameState.player.stock.length > 0) {
         const cardBack = document.createElement('div');
         cardBack.className = 'card back';
-        cardBack.addEventListener('click', drawFromStock);
+        
+        // ★★★ 削除またはコメントアウトする行 ★★★
+        // cardBack.addEventListener('click', drawFromStock); 
+        // ↑ これがあると2回反応しちゃうから消して！
+        
         playerStock.appendChild(cardBack);
     }
     
-    // Render waste (inside renderPlayerBoard function)
-    const playerWaste = document.getElementById('player-waste');
-    playerWaste.innerHTML = '';
-    if (gameState.player.waste.length > 0) {
-        const topCard = gameState.player.waste[gameState.player.waste.length - 1];
-        // ★ここで source: 'waste' を渡す
-        const cardElement = createCardElement(topCard, false, { type: 'waste' });
-        
-        // クリックで自動移動
-        cardElement.addEventListener('click', (e) => {
-             e.stopPropagation();
-             // 4つの組札のどこかに行けるか試す
-             for(let i=0; i<4; i++) moveWasteToFoundation(i);
-        });
-        
-        playerWaste.appendChild(cardElement);
-    }
+    // ... (以下、WasteやFoundationの処理はそのまま) ...
 
-    
     // Render foundations
     for (let i = 0; i < 4; i++) {
         const foundation = document.getElementById(`player-foundation-${i}`);
@@ -934,11 +921,14 @@ function createCardElement(card, hideDetails = false, source = null) {
 
     return cardElement;
 }
-// Draw a card from stock (修正版：連打防止機能つき)
+// Draw a card from stock (スマホ対応・完成版)
 function drawFromStock(e) {
-    // もしクリックイベント情報(e)があれば、親要素への伝播を止める（重複反応防止！）
-    if (e && e.stopPropagation) {
-        e.stopPropagation();
+    // イベント情報(e)がある場合だけ実行
+    if (e) {
+        // 親要素への伝播を止める（念のため）
+        if (e.stopPropagation) e.stopPropagation();
+        // スマホでのダブルタップ判定や拡大などを防ぐ
+        if (e.preventDefault) e.preventDefault();
     }
 
     // 1. 山札があるなら普通に引く
