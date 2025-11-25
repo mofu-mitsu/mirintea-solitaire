@@ -649,50 +649,46 @@ function createCardElement(card, hideDetails = false, source = null) {
         cardElement.dataset.source = JSON.stringify(source);
     }
     
+    // 表向きカードのみ操作可能
     if (!hideDetails && card.faceUp) {
         cardElement.draggable = true;
-        
+
         // --- PC Drag ---
         cardElement.addEventListener('dragstart', (e) => {
             e.stopPropagation();
             const dragData = { card: card, source: source };
             e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
             e.dataTransfer.effectAllowed = 'move';
-            // 選択状態にする（見た目更新のみ）
+
             if (source.type === 'tableau') {
-                gameState.selectedCard = { player: 'player', col: source.col, row: source.row, isMulti: false };
-                // 束判定
-                 if (source.row < gameState.player.tableau[source.col].length - 1) {
-                    gameState.selectedCard.isMulti = true;
-                }
+                gameState.selectedCard = {
+                    player: 'player',
+                    col: source.col,
+                    row: source.row,
+                    isMulti: source.row < gameState.player.tableau[source.col].length - 1
+                };
                 updateSelectionVisuals();
             }
         });
 
         cardElement.addEventListener('dragover', (e) => {
             e.preventDefault();
-            e.stopPropagation();
             e.dataTransfer.dropEffect = 'move';
         });
 
-        // ★修正：ドロップ処理（組札対応）
         cardElement.addEventListener('drop', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
-            // A. 組札（Foundation）の中のカードにドロップした場合
+
             const foundationParent = cardElement.closest('[id^="player-foundation-"]');
             if (foundationParent) {
                 const index = parseInt(foundationParent.id.split('-')[2]);
                 const json = e.dataTransfer.getData('text/plain');
                 if (json) {
                     const data = JSON.parse(json);
-                    // ストックからの移動
                     if (data.source.type === 'waste') {
                         moveWasteToFoundation(index);
-                    } 
-                    // 場札からの移動
-                    else if (data.source.type === 'tableau') {
+                    } else if (data.source.type === 'tableau') {
                         gameState.selectedCard = { player: 'player', col: data.source.col, row: data.source.row };
                         moveCardToFoundation(index);
                     }
@@ -700,7 +696,6 @@ function createCardElement(card, hideDetails = false, source = null) {
                 return;
             }
 
-            // B. 場札（Tableau）のカードにドロップした場合
             if (source && source.type === 'tableau') {
                 handleDropOnTableau(e, source.col);
             }
@@ -709,53 +704,43 @@ function createCardElement(card, hideDetails = false, source = null) {
         // --- Click ---
         cardElement.addEventListener('click', (e) => {
             e.stopPropagation();
-            
-            // 移動トライ
-            if (gameState.selectedCard && 
-                (gameState.selectedCard.col !== source.col || gameState.selectedCard.player !== 'player')) {
-                
+
+            if (gameState.selectedCard && (gameState.selectedCard.col !== source.col || gameState.selectedCard.player !== 'player')) {
                 if (source.type === 'tableau') {
                     moveCardToTableau(source.col);
                     return;
                 }
             }
 
-            // 選択
             if (source.type === 'tableau') {
                 selectCard('player', source.col, source.row);
-                // スマートムーブ
                 if (source.row === gameState.player.tableau[source.col].length - 1) {
                     attemptSmartMove(source.col, source.row);
                 }
             } else if (source.type === 'waste') {
-                // ストックのカードをクリックしたら組札へ自動移動トライ
-                 for(let i=0; i<4; i++) moveWasteToFoundation(i);
+                for (let i = 0; i < 4; i++) moveWasteToFoundation(i);
             }
         });
 
         // --- Mobile Touch ---
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let originalZIndex = '';
-        
-            cardElement.addEventListener('touchstart', (e) => {
-                if (e.touches.length > 1) return;
-                e.stopPropagation();
-                const touch = e.touches[0];
-                cardElement.startX = touch.clientX;
-                cardElement.startY = touch.clientY;
-                cardElement.style.transition = 'none';  // ガクガク防止
-                cardElement.style.zIndex = '1000';
-            }, { passive: false });
-            
-            cardElement.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                const dx = touch.clientX - cardElement.startX;
-                const dy = touch.clientY - cardElement.startY;
-                cardElement.style.transform = `translate(${dx}px, ${dy}px)`;
-            }, { passive: false });
-            
+        cardElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) return;
+            e.stopPropagation();
+            const touch = e.touches[0];
+            cardElement.startX = touch.clientX;
+            cardElement.startY = touch.clientY;
+            cardElement.style.transition = 'none';
+            cardElement.style.zIndex = '1000';
+        }, { passive: false });
+
+        cardElement.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const dx = touch.clientX - cardElement.startX;
+            const dy = touch.clientY - cardElement.startY;
+            cardElement.style.transform = `translate(${dx}px, ${dy}px)`;
+        }, { passive: false });
+
         cardElement.addEventListener('touchend', (e) => {
             e.preventDefault();
             cardElement.style.transition = 'transform 0.2s ease-out';
@@ -764,67 +749,64 @@ function createCardElement(card, hideDetails = false, source = null) {
 
             const touch = e.changedTouches[0];
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (!target) return;
+
+            const foundation = target.closest('[id^="player-foundation-"]');
+            const tableau = target.closest('[id^="player-tableau-"]');
+
+            if (foundation) {
+                const idx = parseInt(foundation.id.split('-')[2]);
+                if (source.type === 'waste') {
+                    moveWasteToFoundation(idx);
+                } else {
+                    // 選択状態を正しく設定してから移動
+                    gameState.selectedCard = {
+                        player: 'player',
+                        col: source.col,
+                        row: source.row,
+                        isMulti: source.row < gameState.player.tableau[source.col].length - 1
+                    };
+                    moveCardToFoundation(idx);
+                    // ここでは selectedCard を null にしない！！！
+                }
+            } 
             
-            if (target) {
-                const foundation = target.closest('[id^="player-foundation-"]');
-                const tableau = target.closest('[id^="player-tableau-"]');
-                
-                if (foundation) {
-                    const idx = parseInt(foundation.id.split('-')[2]);
-                    if (source.type === 'waste') moveWasteToFoundation(idx);
-                    else moveCardToFoundation(idx);
-                else if (tableau) {
-                    const col = parseInt(tableau.id.split('-')[2]);
-                    if (source.type === 'waste') {
-                        // waste→tableauはそのまま
-                        const card = gameState.player.waste[gameState.player.waste.length - 1];
-                        if (canMoveToTableau(gameState.player.tableau[col], card)) {
-                            gameState.player.waste.pop();
-                            gameState.player.tableau[col].push(card);
-                            renderGame();
-                        }
-                    } else {
-                        // ★ここを修正！最後の null クリアを削除！！！
-                        gameState.selectedCard = {
-                            player: 'player',
-                            col: source.col,
-                            row: source.row,
-                            isMulti: source.row < gameState.player.tableau[source.col].length - 1
-                        };
-                        moveCardToTableau(col);
-                        // ← この1行を削除！！！
-                        // gameState.selectedCard = null;   ← 削除！！！
+            else if (tableau) {
+                const col = parseInt(tableau.id.split('-')[2]);
+                if (source.type === 'waste') {
+                    const wasteCard = gameState.player.waste[gameState.player.waste.length - 1];
+                    if (canMoveToTableau(gameState.player.tableau[col], wasteCard)) {
+                        gameState.player.waste.pop();
+                        gameState.player.tableau[col].push(wasteCard);
+                        renderGame();
                     }
+                } else {
+                    // 場札から場札への移動 → 選択状態を正しく設定
+                    gameState.selectedCard = {
+                        player: 'player',
+                        col: source.col,
+                        row: source.row,
+                        isMulti: source.row < gameState.player.tableau[source.col].length - 1
+                    };
+                    moveCardToTableau(col);
+                    // ここも selectedCard を null にしない！！！
                 }
             }
-        });   // ← touchend 閉じた
-
-    }   // ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←
-        // ← これ！！！これが抜けてた！！！ if (!hideDetails && card.faceUp) の閉じ括弧！！！
-
-    // ここから先は createCardElement の普通の処理
-    if (hideDetails) {
-        if (card.faceUp) {
-            cardElement.classList.add('face-up');
-            const fileName = getCardFileName(card);
-            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-            cardElement.style.backgroundSize = 'cover';
-        } else {
-            cardElement.classList.add('back');
-        }
-    } else {
-        if (card.faceUp) {
-            cardElement.classList.add('face-up');
-            const fileName = getCardFileName(card);
-            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-            cardElement.style.backgroundSize = 'cover';
-        } else {
-            cardElement.classList.add('back');
-        }
+        });
     }
-    
+
+    // カードの見た目（表裏）
+    if (card.faceUp) {
+        cardElement.classList.add('face-up');
+        const fileName = getCardFileName(card);
+        cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
+        cardElement.style.backgroundSize = 'cover';
+    } else {
+        cardElement.classList.add('back');
+    }
+
     return cardElement;
-}   // ← createCardElement 関数終了！これで関数が終わる！！！
+}
 
 // Draw a card from stock
 function drawFromStock() {
