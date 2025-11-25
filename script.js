@@ -826,7 +826,6 @@ function drawFromStock() {
         }
     } else if (gameState.player.waste.length > 0) {
         // Reset stock from waste
-        console.log('Resetting stock from waste');
         while (gameState.player.waste.length > 0) {
             const card = gameState.player.waste.pop();
             card.faceUp = false;
@@ -834,8 +833,8 @@ function drawFromStock() {
         }
         renderGame();
         
-        // Check if shuffle is needed after resetting stock
-        shuffleWhenStuck();
+        // ★ここが新機能！ストックが尽きたら自動で中段の裏カードとシャッフル★
+        autoShuffleWhenStockEmpty();
     }
 }
 
@@ -1698,4 +1697,41 @@ function shuffleWhenStuck() {
         // Re-render game
         renderGame();
     }
+}
+
+function autoShuffleWhenStockEmpty() {
+    if (gameState.player.stock.length > 0) return;  // まだストックあるならスルー
+
+    const collect = [];
+
+    // 場札の裏向きカードだけ集める
+    for (let col = 0; col < 7; col++) {
+        const pile = gameState.player.tableau[col];
+        for (let i = 0; i < pile.length; i++) {
+            if (!pile[i].faceUp) {
+                collect.push(pile[i]);
+                pile.splice(i, 1);
+                i--;  // 削除した分インデックスずれるから
+            } else {
+                break;  // 表向きが出てきたらそれ以降は残す
+            }
+        }
+    }
+
+    if (collect.length === 0) return;
+
+    // シャッフルしてストックに戻す
+    shuffleArray(collect);
+    gameState.player.stock.push(...collect);
+
+    // 場札の新しいトップを表にする
+    for (let col = 0; col < 7; col++) {
+        const pile = gameState.player.tableau[col];
+        if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+            pile[pile.length - 1].faceUp = true;
+        }
+    }
+
+    showRandomDialogue('shuffle');
+    renderGame();
 }
