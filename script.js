@@ -554,11 +554,68 @@ function shuffleArray(array) {
     return array;
 }
 
-// Render the game board
+// Render the game board (Initial full render)
 function renderGame() {
     renderPlayerBoard();
+    renderPlayerTableau(); // 分離した！
     renderMirinteaBoard();
-    renderTableau(); // Add this line
+    renderMirinteaTableau(); // 分離した！
+}
+
+// Update ONLY Player's board (call this when player moves)
+function updatePlayerScreen() {
+    renderPlayerBoard();
+    renderPlayerTableau();
+}
+
+// Update ONLY Mirintea's board (call this when Mirintea moves)
+function updateMirinteaScreen() {
+    renderMirinteaBoard();
+    renderMirinteaTableau();
+}
+
+// Render player's tableau ONLY
+function renderPlayerTableau() {
+    for (let col = 0; col < 7; col++) {
+        const tableauColumn = document.getElementById(`player-tableau-${col}`);
+        tableauColumn.innerHTML = '';
+        
+        // ★修正：空の列でも当たり判定を持つように高さを強制確保
+        // Kをドラッグで置くために必須！
+        tableauColumn.style.minHeight = '150px'; 
+        
+        for (let row = 0; row < gameState.player.tableau[col].length; row++) {
+            const card = gameState.player.tableau[col][row];
+            const sourceInfo = { type: 'tableau', col: col, row: row };
+            const cardElement = createCardElement(card, false, sourceInfo);
+            cardElement.style.top = `${row * 20}px`;
+            
+            cardElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectCard('player', col, row);
+                if (row === gameState.player.tableau[col].length - 1) {
+                    attemptSmartMove(col, row);
+                }
+            });
+            
+            tableauColumn.appendChild(cardElement);
+        }
+    }
+}
+
+// Render Mirintea's tableau ONLY
+function renderMirinteaTableau() {
+    for (let col = 0; col < 7; col++) {
+        const tableauColumn = document.getElementById(`mirintea-tableau-${col}`);
+        tableauColumn.innerHTML = '';
+        
+        for (let row = 0; row < gameState.mirintea.tableau[col].length; row++) {
+            const card = gameState.mirintea.tableau[col][row];
+            const cardElement = createCardElement(card, true);
+            cardElement.style.top = `${row * 20}px`;
+            tableauColumn.appendChild(cardElement);
+        }
+    }
 }
 
 // Render player's board
@@ -812,31 +869,65 @@ function createCardElement(card, hideDetails = false, source = null) {
 
     return cardElement;
 }
-// Draw a card from stock
+// Draw a card from stock (Player)
 function drawFromStock() {
-    console.log('Drawing from stock');
+    // console.log('Drawing from stock');
     if (gameState.player.stock.length > 0) {
         const card = gameState.player.stock.pop();
-        console.log('Drew card:', card);
         card.faceUp = true;
         gameState.player.waste.push(card);
-        renderGame();
         
-        // Check if player won
-        if (checkWinCondition('player')) {
-            showGameOver(true);
-        }
-    } else if (gameState.player.waste.length > 0) {
-        // Reset stock from waste
+        updatePlayerScreen(); // ★ここ変更：プレイヤー画面だけ更新
+        
+        if (checkWinCondition('player')) showGameOver(true);
+
+    } else {
+        // ストックが空なら、Wasteを戻すか、裏向きカードを回収してシャッフル
+        autoShufflePlayer();
+    }
+}
+
+// ★プレイヤー専用シャッフル関数（独立化）
+function autoShufflePlayer() {
+    // 1. WasteがあればStockに戻す（通常のソリティアの挙動）
+    if (gameState.player.waste.length > 0) {
         while (gameState.player.waste.length > 0) {
             const card = gameState.player.waste.pop();
             card.faceUp = false;
             gameState.player.stock.push(card);
         }
-        renderGame();
+        updatePlayerScreen();
+        return;
+    }
+
+    // 2. WasteもStockもない場合、場札の裏向きカードを回収（特別ルール）
+    const collect = [];
+    for (let col = 0; col < 7; col++) {
+        const pile = gameState.player.tableau[col];
+        for (let i = 0; i < pile.length; i++) {
+            if (!pile[i].faceUp) {
+                collect.push(pile[i]);
+                pile.splice(i, 1);
+                i--;
+            } else {
+                break;
+            }
+        }
+    }
+
+    if (collect.length > 0) {
+        shuffleArray(collect);
+        gameState.player.stock.push(...collect);
         
-        // ★ここが新機能！ストックが尽きたら自動で中段の裏カードとシャッフル★
-        autoShuffleWhenStockEmpty();
+        // 場札の新しいトップを表にする
+        for (let col = 0; col < 7; col++) {
+            const pile = gameState.player.tableau[col];
+            if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+                pile[pile.length - 1].faceUp = true;
+            }
+        }
+        showRandomDialogue('shuffle');
+        updatePlayerScreen(); // ★プレイヤー画面だけ更新
     }
 }
 
@@ -1074,14 +1165,17 @@ function addFoundationEventListeners() {
 }
 
 // Add drag and drop event listeners to tableau columns
+// Add drag and drop event listeners to tableau columns
 function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         
-        // ★修正：空の列でも当たり判定を持つように高さを強制確保
-        tableauColumn.style.minHeight = '150px'; 
-        
-        // 列自体へのドラッグ＆ドロップ
+        // 列自体へのドラッグ処理
+        // ★ここ追加：dragenterでも拒否しないようにする
+        tableauColumn.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+        });
+
         tableauColumn.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
@@ -1092,7 +1186,7 @@ function addTableauEventListeners() {
             handleDropOnTableau(e, col);
         });
         
-        // 列の背景クリックで移動
+        // 列の背景クリックで移動（K用）
         tableauColumn.addEventListener('click', (e) => {
              e.stopPropagation();
              if (gameState.selectedCard) moveCardToTableau(col);
@@ -1171,21 +1265,50 @@ function attemptSmartMove(col, row) {
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // ★追加：ストックが尽きたら自動でwasteから戻す（プレイヤーと同じ処理）
+    // ★みりんてゃ独自のシャッフルロジック
+    // StockもWasteも空っぽなら、自分の場札の裏カードを回収してStockにする
+    if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
+        const collect = [];
+        for (let col = 0; col < 7; col++) {
+            const pile = gameState.mirintea.tableau[col];
+            for (let i = 0; i < pile.length; i++) {
+                if (!pile[i].faceUp) {
+                    collect.push(pile[i]);
+                    pile.splice(i, 1);
+                    i--;
+                } else {
+                    break;
+                }
+            }
+        }
+        if (collect.length > 0) {
+            shuffleArray(collect);
+            gameState.mirintea.stock.push(...collect);
+            // 場札のめくり
+            for (let col = 0; col < 7; col++) {
+                const pile = gameState.mirintea.tableau[col];
+                if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+                    pile[pile.length - 1].faceUp = true;
+                }
+            }
+            updateMirinteaScreen(); // ★みりんてゃ側だけ更新！
+            return;
+        }
+    }
+
+    // StockがないけどWasteがあるなら戻す
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
         while (gameState.mirintea.waste.length > 0) {
             const card = gameState.mirintea.waste.pop();
             card.faceUp = false;
             gameState.mirintea.stock.push(card);
         }
-        renderGame();
-        showRandomDialogue('idle');
-        return; // リセットしたら今回はここで終了
+        updateMirinteaScreen(); // ★みりんてゃ側だけ更新！
+        return;
     }
 
-    // Simple AI: 50% chance to draw from stock, 50% to make a move
+    // AI Action: Draw from stock (50% chance)
     if (Math.random() < 0.5 && gameState.mirintea.stock.length > 0) {
-        // Draw from stock
         const card = gameState.mirintea.stock.pop();
         card.faceUp = true;
         gameState.mirintea.waste.push(card);
@@ -1195,34 +1318,34 @@ function mirinteaAI() {
             return;
         }
         
-        renderGame();
+        updateMirinteaScreen(); // ★みりんてゃ側だけ更新！
         showRandomDialogue('idle');
         return;
     }
     
-    // 以下、元の移動処理（そのまま）
+    // AI Action: Try to move cards
     let moved = false;
     
+    // 1. Waste -> Foundation
     if (gameState.mirintea.waste.length > 0) {
         const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
         for (let i = 0; i < 4; i++) {
             if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                const movedCard = gameState.mirintea.waste.pop();
-                gameState.mirintea.foundations[i].push(movedCard);
+                gameState.mirintea.foundations[i].push(gameState.mirintea.waste.pop());
                 moved = true;
                 break;
             }
         }
     }
     
+    // 2. Tableau -> Foundation
     if (!moved) {
         for (let col = 0; col < 7; col++) {
             if (gameState.mirintea.tableau[col].length > 0) {
                 const card = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
                 for (let i = 0; i < 4; i++) {
                     if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                        const movedCard = gameState.mirintea.tableau[col].pop();
-                        gameState.mirintea.foundations[i].push(movedCard);
+                        gameState.mirintea.foundations[i].push(gameState.mirintea.tableau[col].pop());
                         if (gameState.mirintea.tableau[col].length > 0 && !gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp) {
                             gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp = true;
                         }
@@ -1235,15 +1358,15 @@ function mirinteaAI() {
         }
     }
     
+    // 3. Tableau -> Tableau
     if (!moved) {
         for (let fromCol = 0; fromCol < 7; fromCol++) {
             if (gameState.mirintea.tableau[fromCol].length > 0) {
                 const card = gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1];
                 for (let toCol = 0; toCol < 7; toCol++) {
                     if (fromCol !== toCol && canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
-                        const movedCard = gameState.mirintea.tableau[fromCol].pop();
-                        gameState.mirintea.tableau[toCol].push(movedCard);
-                        if (gameState.mirintea.tableau[fromCol].length > 0 && !gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp) {
+                        gameState.mirintea.tableau[toCol].push(gameState.mirintea.tableau[fromCol].pop());
+                         if (gameState.mirintea.tableau[fromCol].length > 0 && !gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp) {
                             gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp = true;
                         }
                         moved = true;
@@ -1255,6 +1378,7 @@ function mirinteaAI() {
         }
     }
     
+    // 4. Flip hidden card
     if (!moved) {
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
@@ -1266,14 +1390,16 @@ function mirinteaAI() {
         }
     }
     
-    renderGame();
+    // ★最後のみりんてゃ画面更新
+    updateMirinteaScreen();
 
     if (checkWinCondition('mirintea')) {
         showGameOver(false);
         return;
     }
-
-    const playerProgress = calculateProgress('player');
+    
+    // ... (Dialogue logic remains same) ...
+     const playerProgress = calculateProgress('player');
     const mirinteaProgress = calculateProgress('mirintea');
     
     if (mirinteaProgress > playerProgress + 3) {
