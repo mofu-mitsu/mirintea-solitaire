@@ -1,6 +1,9 @@
 /* Global Styles */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ★ここ修正！汎用のhiddenクラスを追加して、オーバーレイがちゃんと消えるようにしたよ！ */
+.hidden { display: none !important; }
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #ffcce6, #cce5ff);
@@ -9,9 +12,10 @@ body {
     color: #333;
 }
 
-/* モーダル類（変更なし） */
+/* モーダル類 */
 .modal { display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
-.modal.hidden { display: none; }
+/* .modal.hidden は上の .hidden で代用できるけど、念のため残してもOK */
+
 .modal-content { background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-width: 400px; width: 90%; }
 .modal-content h2 { margin-bottom: 20px; color: #ff66b2; }
 #playerName { width: 100%; padding: 12px; margin-bottom: 20px; border: 2px solid #ff66b2; border-radius: 8px; font-size: 16px; }
@@ -31,80 +35,87 @@ body {
     border-radius: 20px; padding: 20px;
     box-shadow: 0 10px 30px rgba(255,102,178,0.3);
     border: 4px solid #ff99cc;
+    /* フレックスボックスにして、縦に並べるようにするよ */
+    display: flex;
+    flex-direction: column;
+    height: 90vh; /* 高さ固定してレイアウト崩れ防止 */
 }
 
 .player-side h2, .mirintea-side h2 {
-    text-align: center; margin-bottom: 15px; color: #ff3399;
+    text-align: center; margin-bottom: 10px; color: #ff3399;
     font-size: 24px; text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+    flex-shrink: 0;
 }
 
-/* ===== ここから超重要：伝統的ソリティア配置に完全復元 ===== */
+/* === レイアウト変更エリア === */
 
-/* 上段：ストック | 廃棄 | 空き | 組札4つ（横並び） */
+/* 上段：組札（Foundations）だけにする！ */
 .top-row {
     display: flex;
-    justify-content: space-between;
+    justify-content: center; /* 真ん中寄せ */
     align-items: center;
-    margin-bottom: 20px;
-    height: 130px;
+    margin-bottom: 10px;
+    height: 110px;
+    flex-shrink: 0;
 }
 
-.stock-waste-area {
-    display: flex;
-    gap: 20px;
-}
-
-.stock, .waste {
-    width: 80px; height: 120px;
-    background: rgba(255,182,193,0.25);
-    border: 3px dashed #ff66b2;
-    border-radius: 12px;
-    box-shadow: inset 0 0 15px rgba(255,255,255,0.5);
-}
-
-/* 組札4つは横並び（伝統的配置） */
 .foundations {
     display: flex;
-    gap: 15px;
-    flex: 1;
-    justify-content: flex-end;
+    gap: 10px;
 }
 
 .foundation {
-    width: 80px; height: 120px;
+    width: 70px; height: 100px;
     background: rgba(255,182,193,0.25);
     border: 3px dashed #ff66b2;
     border-radius: 12px;
     box-shadow: inset 0 0 15px rgba(255,255,255,0.5);
     position: relative;
 }
-
-/* 組札の♡完全消滅 */
 .foundation:empty::after { display: none; }
 
-/* 場札7列（伝統的配置） */
+/* 中段：場札（Tableau） */
 .tableau {
     display: flex;
     justify-content: space-between;
-    gap: 15px;
+    gap: 5px;
+    flex-grow: 1; /* 余ったスペースを使う */
+    margin-bottom: 10px;
+    position: relative;
 }
 
 .tableau-column {
-    width: 80px;
-    min-height: 400px;
-    background: transparent;   /* 背景なしでスッキリ */
+    width: 13%; /* 幅を%指定にして収まりよく */
+    background: transparent;
     position: relative;
-    border: 3px dashed rgba(255,102,178,0.2);
     border-radius: 12px;
+    min-height: 200px;
 }
-
-/* 場札の空き列にも♡は邪魔なので消す */
 .tableau-column:empty::after { display: none; }
 
-/* ストック・廃棄の♡も消す */
+/* ★ここ追加！下段：ストックと廃棄札（Stock & Waste） */
+.bottom-controls {
+    display: flex;
+    justify-content: center; /* 真ん中に配置 */
+    gap: 20px;
+    height: 110px;
+    margin-top: auto; /* 一番下に押しやる */
+    padding-top: 10px;
+    border-top: 2px dashed rgba(255,102,178,0.3); /* 区切り線 */
+    flex-shrink: 0;
+}
+
+.stock, .waste {
+    width: 70px; height: 100px;
+    background: rgba(255,182,193,0.25);
+    border: 3px dashed #ff66b2;
+    border-radius: 12px;
+    box-shadow: inset 0 0 15px rgba(255,255,255,0.5);
+    position: relative;
+}
 .stock:empty::after, .waste:empty::after { display: none; }
 
-/* Card Styles（カードだけ可愛く） */
+/* Card Styles */
 .card {
     width: 70px; height: 100px;
     background: white;
@@ -113,103 +124,48 @@ body {
     position: absolute;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(255,102,178,0.4);
-    transition: all 0.2s ease;
+    transition: transform 0.1s ease; /* アニメーション少し早くした */
     background-size: cover;
     z-index: 1;
 }
 
-.card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 12px 30px rgba(255,102,178,0.6);
-    z-index: 100;
+/* スマホ等でカードが小さくなりすぎないように調整 */
+@media (max-width: 768px) {
+    .card, .foundation, .stock, .waste { width: 45px; height: 65px; }
+    .tableau-column { width: 13%; }
 }
 
-.card.back {
-    background: linear-gradient(135deg, #ff66b2, #ff99cc);
-    background-image: url('/cards/back.png');
-    background-size: cover;
+/* オーバーレイ（勝利画面とか） */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000;
 }
-
-/* みりんてゃウィンドウ（ドラッグOK・完璧サイズ） */
-.character-window {
-    position: fixed;
-    bottom: 20px; right: 20px;
-    width: 270px; height: 390px;
-    background: linear-gradient(135deg, #fff0f5, #ffe4f0);
+.overlay-content {
+    background: white; padding: 40px; border-radius: 20px; text-align: center;
     border: 5px solid #ff66b2;
-    border-radius: 28px;
+    max-width: 90%;
+}
+.overlay-content img { width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin-bottom: 20px; }
+.overlay-content p { font-size: 20px; color: #ff3399; margin-bottom: 20px; font-weight: bold; }
+
+/* キャラクターウィンドウ */
+.character-window {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 200px; /* 少しスリムに */
+    background: linear-gradient(135deg, #fff0f5, #ffe4f0);
+    border: 4px solid #ff66b2;
+    border-radius: 20px;
     box-shadow: 0 12px 40px rgba(255,102,178,0.5);
     z-index: 9999;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    font-family: 'Comic Sans MS', cursive, sans-serif;
-    user-select: none;
+    display: flex; flex-direction: column;
 }
-
 .character-header {
-    background: linear-gradient(45deg, #ff3399, #ff66b2);
-    color: white;
-    padding: 12px 15px;
-    font-weight: bold;
-    font-size: 16px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    background: #ff66b2; color: white; padding: 10px;
+    border-radius: 15px 15px 0 0; display: flex; justify-content: space-between;
     cursor: move;
-    border-radius: 23px 23px 0 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
-
-.character-header::after { content: "♡"; animation: heartbeat 1.5s infinite; }
-
-.close-btn {
-    cursor: pointer;
-    background: #ff3399;
-    color: white;
-    width: 34px; height: 34px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    font-weight: bold;
-}
-
-#mirinteaImage {
-    width: 150px; height: 150px;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 6px solid #ff99cc;
-    box-shadow: 0 0 30px rgba(255,102,178,0.8);
-    margin: 10px auto;
-}
-
-.dialogue-box {
-    background: linear-gradient(135deg, #fff0f5, #ffeef8);
-    border: 4px solid #ff66b2;
-    border-radius: 22px;
-    padding: 15px;
-    margin: 0 15px 15px;
-    min-height: 80px;
-    font-size: 15px;
-    color: #d63384;
-    text-shadow: 1px 1px 2px rgba(255,255,255,0.9);
-    box-shadow: 0 6px 18px rgba(255,102,178,0.4);
-}
-
-/* アニメーション */
-@keyframes heartbeat {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.3); }
-}
-
-/* レスポンシブ */
-@media (max-width: 768px) {
-    .top-row { flex-direction: column; height: auto; gap: 15px; }
-    .foundations { justify-content: center; }
-    .stock-waste-area { justify-content: center; }
-    .card { width: 56px; height: 82px; }
-    .foundation, .stock, .waste, .tableau-column { width: 64px; height: 96px; }
-    .character-window { width: 240px; height: 360px; bottom: 10px; right: 10px; }
-}
+.character-content { padding: 10px; text-align: center; }
+#mirinteaImage { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #ff99cc; }
+.dialogue-box { background: white; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 14px; color: #d63384; min-height: 60px; }
