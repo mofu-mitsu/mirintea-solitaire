@@ -811,11 +811,39 @@ function createCardElement(card, hideDetails = false, source = null) {
                 if (source.row === gameState.player.tableau[source.col].length - 1) {
                     attemptSmartMove(source.col, source.row);
                 }
-            } else if (source.type === 'waste') {
-                for (let i = 0; i < 4; i++) moveWasteToFoundation(i);
+            } 
+            // ★ここを書き換えるよ！★
+            else if (source.type === 'waste') {
+                let moved = false;
+                // 1. まず組札（右上）に行けるか試す
+                for (let i = 0; i < 4; i++) {
+                    // moveWasteToFoundationが成功したかどうか判定したいけど
+                    // 今の関数は値を返さないから、事前にチェックするね
+                    const card = gameState.player.waste[gameState.player.waste.length - 1];
+                    if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+                        moveWasteToFoundation(i);
+                        moved = true;
+                        break;
+                    }
+                }
+                
+                // 2. 組札が無理なら、場札（下の列）に行けるか試す
+                if (!moved) {
+                    const card = gameState.player.waste[gameState.player.waste.length - 1];
+                    for (let col = 0; col < 7; col++) {
+                        if (canMoveToTableau(gameState.player.tableau[col], card)) {
+                            // 移動できる列を見つけた！
+                            gameState.player.waste.pop();
+                            gameState.player.tableau[col].push(card);
+                            renderGame();
+                            moved = true;
+                            break;
+                        }
+                    }
+                }
             }
         });
-
+        
         // --- Mobile Touch (修正箇所！) ---
         cardElement.addEventListener('touchstart', (e) => {
             if (e.touches.length > 1) return;
