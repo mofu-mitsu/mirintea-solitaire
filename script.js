@@ -894,9 +894,10 @@ function drawFromStock() {
     }
 }
 
-// ★プレイヤー専用シャッフル関数（強化版）
+// ★プレイヤー専用シャッフル関数（修正版）
 function autoShufflePlayer() {
     const collect = [];
+    const slotsToFill = []; // ★追加：各列に何枚戻せばいいかメモする配列
 
     // 1. まず捨て札(Waste)を全部回収
     while (gameState.player.waste.length > 0) {
@@ -905,27 +906,49 @@ function autoShufflePlayer() {
         collect.push(card);
     }
 
-    // 2. 場札(Tableau)の裏向きカードも全部回収
+    // 2. 場札(Tableau)の裏向きカードを回収しつつ、その枚数を記録
     for (let col = 0; col < 7; col++) {
         const pile = gameState.player.tableau[col];
-        // 後ろからチェックしないとインデックスずれるので注意
+        let count = 0;
+
+        // 後ろからじゃなくて前から見て、裏向きを全部引っこ抜く
         for (let i = 0; i < pile.length; i++) {
             if (!pile[i].faceUp) {
                 collect.push(pile[i]);
                 pile.splice(i, 1);
                 i--; 
+                count++; // ★ここで枚数をカウント！
             } else {
-                break; // 表向きが出たらその列は終了
+                break; // 表向きが出たらその列の回収は終了
             }
         }
+        slotsToFill[col] = count; // ★「この列には〇〇枚戻す」とメモしておく
     }
 
-    // 3. 回収したカードがあればシャッフルしてストックへ
+    // 3. 回収したカードをシャッフル！
     if (collect.length > 0) {
-        shuffleArray(collect); // 混ぜる！
-        gameState.player.stock.push(...collect);
+        shuffleArray(collect); 
+
+        // 4. ★ここが大事！メモした枚数分だけ、場札の「根元」に戻す
+        for (let col = 0; col < 7; col++) {
+            const needToFill = slotsToFill[col];
+            for (let i = 0; i < needToFill; i++) {
+                if (collect.length > 0) {
+                    const card = collect.pop();
+                    card.faceUp = false; // 絶対に裏向き
+                    // unshiftを使って配列の先頭（画面上の奥側）に差し込む
+                    gameState.player.tableau[col].unshift(card);
+                }
+            }
+        }
+
+        // 5. それでも余ったカードをストックに入れる
+        if (collect.length > 0) {
+            gameState.player.stock.push(...collect);
+        }
         
         // 場札の列が空っぽになったり、裏向きがなくなった列のトップを表にする
+        // (念の為のチェック)
         for (let col = 0; col < 7; col++) {
             const pile = gameState.player.tableau[col];
             if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
@@ -936,8 +959,7 @@ function autoShufflePlayer() {
         showRandomDialogue('shuffle');
         updatePlayerScreen();
     } else {
-        // 万が一回収できるカードが一切ない（全部表向きで詰んだ）場合
-        // ここでゲームオーバー判定してもいいけど、とりあえずそのまま
+        // 万が一回収できるカードが一切ない場合
         updatePlayerScreen();
     }
 }
