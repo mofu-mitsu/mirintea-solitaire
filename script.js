@@ -1784,6 +1784,13 @@ function canPlayerMove() {
                 return true;
             }
         }
+        
+        // ★追加：捨て札から場札へ置けるかもチェックしないと判定漏れする！
+        for (let toCol = 0; toCol < 7; toCol++) {
+             if (canMoveToTableau(gameState.player.tableau[toCol], card)) {
+                 return true;
+             }
+        }
     }
     
     // Check if player can move tableau card to foundation
@@ -1816,18 +1823,21 @@ function canPlayerMove() {
     }
     
     // Check if player can draw from stock
+    // 山札に残ってるなら「まだ引ける＝動ける」判定
     if (gameState.player.stock.length > 0) {
         return true;
     }
     
-    // Check if player can reset stock from waste
-    if (gameState.player.waste.length > 0 && gameState.player.stock.length === 0) {
-        return true;
-    }
+    // ★削除！
+    // 以前はここで「WasteがあればStockに戻せるからTrue」にしてたけど、
+    // それが無限ループの原因なので削除！
+    // if (gameState.player.waste.length > 0 && gameState.player.stock.length === 0) {
+    //     return true;
+    // }
     
+    // ここまで来たら本当に何もできない
     return false;
 }
-
 // Check if Mirintea can make any moves
 function canMirinteaMove() {
     // Check if Mirintea can move waste card to foundation
@@ -1837,6 +1847,12 @@ function canMirinteaMove() {
             if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
                 return true;
             }
+        }
+        // ★追加：捨て札から場札へ
+        for (let toCol = 0; toCol < 7; toCol++) {
+             if (canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
+                 return true;
+             }
         }
     }
     
@@ -1874,10 +1890,10 @@ function canMirinteaMove() {
         return true;
     }
     
-    // Check if Mirintea can reset stock from waste
-    if (gameState.mirintea.waste.length > 0 && gameState.mirintea.stock.length === 0) {
-        return true;
-    }
+    // ★削除！
+    // if (gameState.mirintea.waste.length > 0 && gameState.mirintea.stock.length === 0) {
+    //    return true;
+    // }
     
     return false;
 }
