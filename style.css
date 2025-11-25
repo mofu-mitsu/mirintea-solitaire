@@ -35,10 +35,12 @@ body {
     border-radius: 20px; padding: 20px;
     box-shadow: 0 10px 30px rgba(255,102,178,0.3);
     border: 4px solid #ff99cc;
-    /* フレックスボックスにして、縦に並べるようにするよ */
+    
     display: flex;
     flex-direction: column;
-    height: 90vh; /* 高さ固定してレイアウト崩れ防止 */
+    /* ★修正1：高さ固定をやめて、中身に合わせて伸びるようにしたよ！ */
+    height: auto; 
+    min-height: 90vh; /* 最低でも画面いっぱい近くはあるように */
 }
 
 .player-side h2, .mirintea-side h2 {
@@ -79,17 +81,20 @@ body {
     display: flex;
     justify-content: space-between;
     gap: 5px;
-    flex-grow: 1; /* 余ったスペースを使う */
-    margin-bottom: 10px;
+    flex-grow: 1; 
+    margin-bottom: 20px; /* 下に少し余裕を */
     position: relative;
+    /* ★修正2：場札エリアの高さを画面の60%くらい確保！これでストックがだいぶ下にいくはず */
+    min-height: 60vh; 
 }
 
 .tableau-column {
-    width: 13%; /* 幅を%指定にして収まりよく */
+    width: 13%; 
     background: transparent;
     position: relative;
     border-radius: 12px;
-    min-height: 200px;
+    /* min-heightは親に任せるから削除かそのままでOK */
+    height: 100%; 
 }
 .tableau-column:empty::after { display: none; }
 
@@ -152,7 +157,7 @@ body {
 
 /* キャラクターウィンドウ */
 .character-window {
-    position: fixed; bottom: 20px; right: 20px;
+    position: fixed; top: calc(100vh - 240px); right: 20px;
     width: 200px; /* 少しスリムに */
     background: linear-gradient(135deg, #fff0f5, #ffe4f0);
     border: 4px solid #ff66b2;
