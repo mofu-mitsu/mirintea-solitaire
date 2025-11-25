@@ -963,6 +963,67 @@ function autoShufflePlayer() {
         updatePlayerScreen();
     }
 }
+// ★みりんてゃ専用シャッフル関数（新規追加）
+function autoShuffleMirintea() {
+    const collect = [];
+    const slotsToFill = []; // 各列に何枚戻せばいいかメモ
+
+    // 1. Wasteを回収
+    while (gameState.mirintea.waste.length > 0) {
+        const card = gameState.mirintea.waste.pop();
+        card.faceUp = false;
+        collect.push(card);
+    }
+
+    // 2. 場札の裏向き回収 & 枚数メモ
+    for (let col = 0; col < 7; col++) {
+        const pile = gameState.mirintea.tableau[col];
+        let count = 0;
+        for (let i = 0; i < pile.length; i++) {
+            if (!pile[i].faceUp) {
+                collect.push(pile[i]);
+                pile.splice(i, 1);
+                i--;
+                count++;
+            } else {
+                break;
+            }
+        }
+        slotsToFill[col] = count;
+    }
+
+    // 3. シャッフルして戻す
+    if (collect.length > 0) {
+        shuffleArray(collect);
+
+        // 4. 元の場所に穴埋め
+        for (let col = 0; col < 7; col++) {
+            const needToFill = slotsToFill[col];
+            for (let i = 0; i < needToFill; i++) {
+                if (collect.length > 0) {
+                    const card = collect.pop();
+                    card.faceUp = false;
+                    gameState.mirintea.tableau[col].unshift(card);
+                }
+            }
+        }
+
+        // 5. 余りをストックへ
+        if (collect.length > 0) {
+            gameState.mirintea.stock.push(...collect);
+        }
+
+        // 場札の先頭を表にする（念の為）
+        for (let col = 0; col < 7; col++) {
+            const pile = gameState.mirintea.tableau[col];
+            if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+                pile[pile.length - 1].faceUp = true;
+            }
+        }
+
+        updateMirinteaScreen(); // 画面更新
+    }
+}
 
 // Select a card (描画リセットを廃止して軽量化！)
 function selectCard(player, col, row) {
