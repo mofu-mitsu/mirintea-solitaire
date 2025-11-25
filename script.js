@@ -396,6 +396,7 @@ function startGame() {
     addFoundationEventListeners();
     addTableauEventListeners();
     addStockEventListener(); // Add this line
+    addTrickButtonListener();
     
     // Start Mirintea's AI and shuffle check
     setInterval(() => {
@@ -1943,4 +1944,67 @@ function autoShuffleWhenStockEmpty() {
 
     showRandomDialogue('shuffle');
     renderGame();
+}
+
+
+// ==========================================
+// 2. 「トリック」機能の実装
+// ==========================================
+
+function addTrickButtonListener() {
+    const trickBtn = document.getElementById('trickButton');
+    if(trickBtn) {
+        trickBtn.addEventListener('click', useTrick);
+    }
+}
+
+// トリック発動！ランダムに裏向きカードを1枚めくる
+function useTrick() {
+    if (!gameState.gameStarted || gameState.gameOver) return;
+
+    // 発動条件：ストックも捨て札も空っぽの時だけ！
+    if (gameState.player.stock.length > 0 || gameState.player.waste.length > 0) {
+        mirinteaDialogue.textContent = "まだ山札があるじゃん！トリックは本当にピンチの時だけだよ？♡";
+        updateMirinteaImage('angry');
+        return;
+    }
+
+    // 裏向きカードがある場所を全部探す
+    let faceDownCandidates = [];
+    
+    for (let col = 0; col < 7; col++) {
+        const pile = gameState.player.tableau[col];
+        // その列の一番上にある裏向きカード（表向きカードの直下）だけを候補にする
+        // （束の途中をめくるとバグるので、めくって安全なカードだけ選ぶ）
+        for (let i = pile.length - 1; i >= 0; i--) {
+            if (!pile[i].faceUp) {
+                faceDownCandidates.push({ col: col, row: i });
+                break; // その列からは1枚だけ候補にする
+            }
+        }
+    }
+
+    if (faceDownCandidates.length === 0) {
+        mirinteaDialogue.textContent = "えっ、もうめくるカードないよ？詰んじゃった…？♡";
+        updateMirinteaImage('shy');
+        return;
+    }
+
+    // ランダムに1つ選ぶ
+    const target = faceDownCandidates[Math.floor(Math.random() * faceDownCandidates.length)];
+    
+    // めくる！
+    gameState.player.tableau[target.col][target.row].faceUp = true;
+    
+    // 画面更新
+    updatePlayerScreen();
+    
+    // みりんてゃの反応
+    mirinteaDialogue.textContent = "トリック！…んふふ、いいカード出た？♡";
+    updateMirinteaImage('win');
+    
+    // ボタンの演出
+    const btn = document.getElementById('trickButton');
+    btn.classList.add('used');
+    setTimeout(() => btn.classList.remove('used'), 500);
 }
