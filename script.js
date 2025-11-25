@@ -783,7 +783,15 @@ function createCardElement(card, hideDetails = false, source = null) {
                             renderGame();
                         }
                     } else {
+                        // ★ここを修正！選択状態を強制設定してから移動！
+                        gameState.selectedCard = {
+                            player: 'player',
+                            col: source.col,
+                            row: source.row,
+                            isMulti: source.row < gameState.player.tableau[source.col].length - 1
+                        };
                         moveCardToTableau(col);
+                        gameState.selectedCard = null; // クリア
                     }
                 }
             }
