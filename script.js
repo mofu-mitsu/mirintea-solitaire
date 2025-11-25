@@ -959,7 +959,7 @@ function drawFromStock() {
 }
 
 // ==========================================
-// ★公平なシャッフル機能（プレイヤー・みりんてゃ共通）
+// ★公平なシャッフル機能（修正完了版！）
 // ==========================================
 function performFairShuffle(who) {
     const state = gameState[who];
@@ -981,31 +981,28 @@ function performFairShuffle(who) {
     }
 
     // 3. 場札(Tableau)の「裏向きカード」だけを引っこ抜く！
-    // ※表向きのカード（積み上げてるやつ）はそのまま残すよ！
     for (let col = 0; col < 7; col++) {
         const pile = state.tableau[col];
         let faceDownCount = 0;
         
         // 下から順にチェックして、裏向きなら回収
-        // (配列の先頭0番目が一番奥のカード)
         while (pile.length > 0 && !pile[0].faceUp) {
             collect.push(pile.shift()); // 先頭から抜く
             faceDownCount++;
         }
-        slotsToFill[col] = faceDownCount; // この列には〇〇枚戻せばいいんだな、ってメモ
+        slotsToFill[col] = faceDownCount;
     }
 
     // 4. 回収したカードを豪快にシャッフル！
     shuffleArray(collect);
 
-    // 5. 元あった場所に「裏向き」で戻す（中身は入れ替わってる！）
+    // 5. 元あった場所に「裏向き」で戻す
     for (let col = 0; col < 7; col++) {
         const count = slotsToFill[col];
         for (let i = 0; i < count; i++) {
             if (collect.length > 0) {
                 const card = collect.pop();
                 card.faceUp = false;
-                // unshiftで「配列の先頭（一番奥）」に差し込む
                 state.tableau[col].unshift(card);
             }
         }
@@ -1016,10 +1013,20 @@ function performFairShuffle(who) {
         state.stock.push(collect.pop());
     }
 
+    // ★★★ ここが追加した修正ポイント！ ★★★
+    // 7. 最後に「各列の一番上が裏向きなら、表にする」処理を入れる！
+    // これがないと、シャッフル後にめくれないカードが出ちゃうんだ
+    for (let col = 0; col < 7; col++) {
+        const pile = state.tableau[col];
+        // 列にカードがあって、一番上が裏向きなら
+        if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+            pile[pile.length - 1].faceUp = true; // 強制的にめくる！
+        }
+    }
+
     // 画面更新！
     if (who === 'player') {
         updatePlayerScreen();
-        // シャッフルしたよ！ってセリフ
         mirinteaDialogue.textContent = "手詰まり？カード全部混ぜ直したから、これでいけるっしょ！♡";
         updateMirinteaImage('doka');
     } else {
