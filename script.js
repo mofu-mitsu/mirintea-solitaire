@@ -722,7 +722,7 @@ function createCardElement(card, hideDetails = false, source = null) {
             }
         });
 
-        // --- Mobile Touch ---
+        // --- Mobile Touch (修正箇所！) ---
         cardElement.addEventListener('touchstart', (e) => {
             if (e.touches.length > 1) return;
             e.stopPropagation();
@@ -743,12 +743,21 @@ function createCardElement(card, hideDetails = false, source = null) {
 
         cardElement.addEventListener('touchend', (e) => {
             e.preventDefault();
+            
+            // ★ここが修正ポイント！
+            // 1. 自分のカードを一瞬隠す（これがないと判定が自分になっちゃう）
+            cardElement.style.display = 'none';
+
+            // 2. その下にある要素を取得
+            const touch = e.changedTouches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            // 3. 自分のカードを即座に戻す
+            cardElement.style.display = ''; 
             cardElement.style.transition = 'transform 0.2s ease-out';
             cardElement.style.transform = '';
             cardElement.style.zIndex = '';
 
-            const touch = e.changedTouches[0];
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
             if (!target) return;
 
             const foundation = target.closest('[id^="player-foundation-"]');
@@ -759,7 +768,6 @@ function createCardElement(card, hideDetails = false, source = null) {
                 if (source.type === 'waste') {
                     moveWasteToFoundation(idx);
                 } else {
-                    // 選択状態を正しく設定してから移動
                     gameState.selectedCard = {
                         player: 'player',
                         col: source.col,
@@ -767,21 +775,19 @@ function createCardElement(card, hideDetails = false, source = null) {
                         isMulti: source.row < gameState.player.tableau[source.col].length - 1
                     };
                     moveCardToFoundation(idx);
-                    // ここでは selectedCard を null にしない！！！
                 }
             } 
-            
             else if (tableau) {
                 const col = parseInt(tableau.id.split('-')[2]);
                 if (source.type === 'waste') {
                     const wasteCard = gameState.player.waste[gameState.player.waste.length - 1];
+                    // ここでmove可能かチェックして移動
                     if (canMoveToTableau(gameState.player.tableau[col], wasteCard)) {
                         gameState.player.waste.pop();
                         gameState.player.tableau[col].push(wasteCard);
                         renderGame();
                     }
                 } else {
-                    // 場札から場札への移動 → 選択状態を正しく設定
                     gameState.selectedCard = {
                         player: 'player',
                         col: source.col,
@@ -789,13 +795,12 @@ function createCardElement(card, hideDetails = false, source = null) {
                         isMulti: source.row < gameState.player.tableau[source.col].length - 1
                     };
                     moveCardToTableau(col);
-                    // ここも selectedCard を null にしない！！！
                 }
             }
         });
     }
 
-    // カードの見た目（表裏）
+    // 画像設定
     if (card.faceUp) {
         cardElement.classList.add('face-up');
         const fileName = getCardFileName(card);
@@ -807,7 +812,6 @@ function createCardElement(card, hideDetails = false, source = null) {
 
     return cardElement;
 }
-
 // Draw a card from stock
 function drawFromStock() {
     console.log('Drawing from stock');
@@ -1073,6 +1077,9 @@ function addFoundationEventListeners() {
 function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
+        
+        // ★修正：空の列でも当たり判定を持つように高さを強制確保
+        tableauColumn.style.minHeight = '150px'; 
         
         // 列自体へのドラッグ＆ドロップ
         tableauColumn.addEventListener('dragover', (e) => {
