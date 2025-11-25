@@ -1179,7 +1179,19 @@ function attemptSmartMove(col, row) {
 // Mirintea's AI logic
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
-    
+
+    // ★追加：ストックが尽きたら自動でwasteから戻す（プレイヤーと同じ処理）
+    if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
+        while (gameState.mirintea.waste.length > 0) {
+            const card = gameState.mirintea.waste.pop();
+            card.faceUp = false;
+            gameState.mirintea.stock.push(card);
+        }
+        renderGame();
+        showRandomDialogue('idle');
+        return; // リセットしたら今回はここで終了
+    }
+
     // Simple AI: 50% chance to draw from stock, 50% to make a move
     if (Math.random() < 0.5 && gameState.mirintea.stock.length > 0) {
         // Draw from stock
@@ -1187,7 +1199,6 @@ function mirinteaAI() {
         card.faceUp = true;
         gameState.mirintea.waste.push(card);
         
-        // Check if Mirintea won
         if (checkWinCondition('mirintea')) {
             showGameOver(false);
             return;
@@ -1198,10 +1209,9 @@ function mirinteaAI() {
         return;
     }
     
-    // Try to make a move
+    // 以下、元の移動処理（そのまま）
     let moved = false;
     
-    // Try to move cards from waste to foundations
     if (gameState.mirintea.waste.length > 0) {
         const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
         for (let i = 0; i < 4; i++) {
@@ -1214,7 +1224,6 @@ function mirinteaAI() {
         }
     }
     
-    // Try to move cards from tableau to foundations
     if (!moved) {
         for (let col = 0; col < 7; col++) {
             if (gameState.mirintea.tableau[col].length > 0) {
@@ -1223,7 +1232,6 @@ function mirinteaAI() {
                     if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
                         const movedCard = gameState.mirintea.tableau[col].pop();
                         gameState.mirintea.foundations[i].push(movedCard);
-                        // Flip the new top card if it's face down
                         if (gameState.mirintea.tableau[col].length > 0 && !gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp) {
                             gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp = true;
                         }
@@ -1236,16 +1244,14 @@ function mirinteaAI() {
         }
     }
     
-    // Try to move cards between tableau columns
     if (!moved) {
-        for (let fromCol = 0; fromCol < 7; fromCol++) {
+        for (let fromCol = 0; fromCol < 7; col++) {
             if (gameState.mirintea.tableau[fromCol].length > 0) {
                 const card = gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1];
                 for (let toCol = 0; toCol < 7; toCol++) {
                     if (fromCol !== toCol && canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
                         const movedCard = gameState.mirintea.tableau[fromCol].pop();
                         gameState.mirintea.tableau[toCol].push(movedCard);
-                        // Flip the new top card if it's face down
                         if (gameState.mirintea.tableau[fromCol].length > 0 && !gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp) {
                             gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp = true;
                         }
@@ -1258,41 +1264,35 @@ function mirinteaAI() {
         }
     }
     
-    // If no move was made, try to flip a hidden card
     if (!moved) {
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
-            if (pile.length > 0) {
-                const topCard = pile[pile.length - 1];
-                if (!topCard.faceUp) {
-                    topCard.faceUp = true;
-                    moved = true;
-                    break;
-                }
+            if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+                pile[pile.length - 1].faceUp = true;
+                moved = true;
+                break;
             }
         }
     }
     
     renderGame();
-    
-    // Check win condition
+
     if (checkWinCondition('mirintea')) {
         showGameOver(false);
         return;
     }
-    
-    // Show appropriate dialogue based on game state
+
     const playerProgress = calculateProgress('player');
     const mirinteaProgress = calculateProgress('mirintea');
     
     if (mirinteaProgress > playerProgress + 3) {
-        showRandomDialogue('winning');  // ドヤ顔
+        showRandomDialogue('winning');
     } else if (playerProgress > mirinteaProgress + 3) {
-        showRandomDialogue('losing'); // 泣き顔
+        showRandomDialogue('losing');
     } else if (Math.random() < 0.1) {
-        showRandomDialogue('tsundere'); // 10%でツンデレ顔（照れ）
+        showRandomDialogue('tsundere');
     } else {
-        showRandomDialogue('idle'); // 通常はidle（でも中でランダム表情）
+        showRandomDialogue('idle');
     }
 }
 
