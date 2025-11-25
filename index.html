@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="みりんてゃと対戦するダブルソリティアゲーム。クラシックなKlondikeソリティアをAIキャラクターみりんてゃと対戦できます。">
     <meta name="keywords" content="ソリティア, カードゲーム, みりんてゃ, 対戦ゲーム, Klondike, ソロゲーム">
-    <meta name="author" content="みつき">
+    <meta name="author" content="みりんてゃファン">
     <meta property="og:title" content="みりんてゃソリティア - AIキャラクターと対戦するソリティアゲーム">
     <meta property="og:description" content="みりんてゃと対戦するダブルソリティアゲーム。クラシックなKlondikeソリティアをAIキャラクターみりんてゃと対戦できます。">
     <meta property="og:type" content="website">
@@ -24,10 +24,10 @@
     <!-- Player Name Modal -->
     <div id="nameModal" class="modal">
         <div class="modal-content">
-            <h2>あなたの名前を教えて♡</h2>
-            <input type="text" id="playerName" placeholder="みつき">
-            <button id="startButton">開始</button>
-            <button id="rulesButton" class="rules-button">ルール説明</button>
+            <h2>きみの名前を教えてね♡</h2>
+            <input type="text" id="playerName" placeholder="きみ" maxlength="10">
+            <button id="startButton">開始するよ！</button>
+            <button id="rulesButton" class="rules-button">ルール説明を見る</button>
         </div>
     </div>
 
@@ -35,40 +35,44 @@
     <div id="rulesModal" class="modal hidden">
         <div class="modal-content rules-modal">
             <span class="close-btn" id="closeRulesBtn">×</span>
-            <h2>ソリティアのルール説明</h2>
+            <h2>みりんてゃソリティアのルール♡</h2>
             <div class="rules-content">
                 <h3>基本ルール</h3>
-                <p>ソリティア（Klondike）は、すべてのカードをスート（ハート、ダイヤ、クラブ、スペード）ごとにAからKの順に.foundation piles（基礎札）に並べるゲームです。</p>
+                <p>クラシックなKlondikeソリティアです！<br>すべてのカードをスート（♥♦♣♠）ごとにA→Kの順に組札に並べたらクリア！</p>
                 
-                <h3>ゲームのクリア条件</h3>
-                <p>組札に各種マークのA〜Kを順番に重ねることで、ゲームクリアとなります。</p>
+                <h3>勝利条件</h3>
+                <p>先に4つの組札を全部完成させた方が勝ち！<br>みりんてゃに負けたら…きみをぎゅーってしちゃうよ？♡</p>
                 
-                <h3>遊び方</h3>
-                <p>ゲーム開始時にジョーカーを除く52枚のカードが、山札と場札にセットされます。以下に沿って裏向きのカードを表向きにしながら、組札にカードを重ねていきます。</p>
+                <h3>山札（ストック）と廃棄札（ウェイスト）</h3>
+                <p>・山札をクリック／タップで1枚ずつめくるよ<br>
+                ・廃棄札に出たカードは場札や組札に移動できる<br>
+                <strong>★山札が空っぽになったら自動で廃棄札を全部集めてシャッフル！</strong><br>
+                （もう昔みたいに手動で戻さなくていいんだよ～！）</p>
+                
+                <h3>場札（タブロー）</h3>
                 <ul>
-                    <li>場札の表向きのカードを移動させて、赤と黒のカードを交互に大きい数字の上に小さい数字を重ねられます</li>
-                    <li>場札の重なったカードは、まとめて場札のカードに移動させることもできます。</li>
-                    <li>場札の伏せてあるカードは、表向きのカードを移動させることで、1枚めくることができます。</li>
-                    <li>空になった場合は、Kのカードを置くことができます。</li>
-                    <li>山札は、1枚ずつ表向きにでき、一番上のカードを場札や組札に移動させることができます。</li>
-                    <li>山札をすべて表向きにして残りがある場合は、何度でも表向きのカードを再度裏向きにして1枚ずつ表向きにできます。</li>
+                    <li>赤と黒を交互に、数字は大きい→小さい順に重ねられる</li>
+                    <li>まとめて移動もできるよ</li>
+                    <li>空いた列にはKしか置けない</li>
+                    <li>裏向きカードは動かすと自動で表になる</li>
                 </ul>
+                
+                <h3>組札（ファウンデーション）</h3>
+                <p>Aから始めて同じマークで順番に重ねていくよ<br>（Aの上に2、2の上に3…Kまで）</p>
                 
                 <h3>操作方法</h3>
                 <ul>
-                    <li>カードをクリックして選択し、移動先をクリックして移動します</li>
-                    <li>ドラッグアンドドロップでもカードを移動できます</li>
-                    <li>山札をクリックしてカードをめくります</li>
-                    <li>スマートフォンやタブレットでは、カードをタップして選択し、移動先をタップして移動します</li>
+                    <li>PC：クリックで選択 → 移動先クリック / ドラッグ＆ドロップ</li>
+                    <li>スマホ：タップで選択 → 移動先タップ / 長押しドラッグ</li>
+                    <li>ダブルタップでスマート移動もできるよ！</li>
                 </ul>
                 
-                <h3>対戦モード</h3>
-                <p>画面右側にみりんてゃも同じようにプレイしています。どちらかが先に4つの.foundation pilesを完成させたら勝利です！</p>
-                
-                <h3>自動シャッフル機能</h3>
-                <p>プレイヤーとみりんてゃの両方が手が止まった場合、自動的に場札と山札をシャッフルして再配置されます。組札はシャッフルされません。</p>
+                <h3>重要ポイント</h3>
+                <p>プレイヤーとみりんてゃは<strong>完全に独立</strong>してるから、<br>
+                きみとみりんてゃの山札・廃棄札はもう連動しません！<br>
+                お互い自分のペースでガチ対戦だよ～！</p>
             </div>
-            <button id="closeRulesButton">閉じる</button>
+            <button id="closeRulesButton">わかった！閉じる♡</button>
         </div>
     </div>
 
@@ -76,17 +80,23 @@
     <div class="game-container">
         <!-- Player Side -->
         <div class="player-side">
-            <h2 id="playerNameDisplay">Player</h2>
+            <h2 id="playerNameDisplay">きみ</h2>
             <div class="game-board" id="playerBoard">
-                <!-- Foundation piles (A-K) -->
-                <div class="foundations">
-                    <div class="foundation" id="player-foundation-0"></div>
-                    <div class="foundation" id="player-foundation-1"></div>
-                    <div class="foundation" id="player-foundation-2"></div>
-                    <div class="foundation" id="player-foundation-3"></div>
+                <!-- 上段：ストック＋廃棄＋組札4つ（横並び） -->
+                <div class="top-row">
+                    <div class="stock-waste-area">
+                        <div class="stock" id="player-stock"></div>
+                        <div class="waste" id="player-waste"></div>
+                    </div>
+                    <div class="foundations">
+                        <div class="foundation" id="player-foundation-0"></div>
+                        <div class="foundation" id="player-foundation-1"></div>
+                        <div class="foundation" id="player-foundation-2"></div>
+                        <div class="foundation" id="player-foundation-3"></div>
+                    </div>
                 </div>
-                
-                <!-- Tableau piles -->
+
+                <!-- 場札7列 -->
                 <div class="tableau">
                     <div class="tableau-column" id="player-tableau-0"></div>
                     <div class="tableau-column" id="player-tableau-1"></div>
@@ -96,28 +106,26 @@
                     <div class="tableau-column" id="player-tableau-5"></div>
                     <div class="tableau-column" id="player-tableau-6"></div>
                 </div>
-                
-                <!-- Stock and Waste piles -->
-                <div class="stock-waste">
-                    <div class="stock" id="player-stock"></div>
-                    <div class="waste" id="player-waste"></div>
-                </div>
             </div>
         </div>
 
-        <!-- Mirintea Side -->
+        <!-- Mirintea Side（同じレイアウト） -->
         <div class="mirintea-side">
             <h2>みりんてゃ</h2>
             <div class="game-board" id="mirinteaBoard">
-                <!-- Foundation piles (A-K) -->
-                <div class="foundations">
-                    <div class="foundation" id="mirintea-foundation-0"></div>
-                    <div class="foundation" id="mirintea-foundation-1"></div>
-                    <div class="foundation" id="mirintea-foundation-2"></div>
-                    <div class="foundation" id="mirintea-foundation-3"></div>
+                <div class="top-row">
+                    <div class="stock-waste-area">
+                        <div class="stock" id="mirintea-stock"></div>
+                        <div class="waste" id="mirintea-waste"></div>
+                    </div>
+                    <div class="foundations">
+                        <div class="foundation" id="mirintea-foundation-0"></div>
+                        <div class="foundation" id="mirintea-foundation-1"></div>
+                        <div class="foundation" id="mirintea-foundation-2"></div>
+                        <div class="foundation" id="mirintea-foundation-3"></div>
+                    </div>
                 </div>
-                
-                <!-- Tableau piles -->
+
                 <div class="tableau">
                     <div class="tableau-column" id="mirintea-tableau-0"></div>
                     <div class="tableau-column" id="mirintea-tableau-1"></div>
@@ -127,12 +135,6 @@
                     <div class="tableau-column" id="mirintea-tableau-5"></div>
                     <div class="tableau-column" id="mirintea-tableau-6"></div>
                 </div>
-                
-                <!-- Stock and Waste piles -->
-                <div class="stock-waste">
-                    <div class="stock" id="mirintea-stock"></div>
-                    <div class="waste" id="mirintea-waste"></div>
-                </div>
             </div>
         </div>
     </div>
@@ -140,12 +142,13 @@
     <!-- Mirintea Character Window -->
     <div class="character-window" id="mirinteaWindow">
         <div class="character-header drag-handle" id="mirinteaHeader">
+            <span>みりんてゃ</span>
             <span class="close-btn" id="closeBtn">×</span>
         </div>
         <div class="character-content">
-            <img id="mirinteaImage" src="/mirintea/default.png" alt="Mirintea">
+            <img id="mirinteaImage" src="/mirintea/default.png" alt="みりんてゃ">
             <div class="dialogue-box">
-                <p id="mirinteaDialogue">ねぇ、{name}？今日こそ勝つから覚悟して？♡</p>
+                <p id="mirinteaDialogue">ねぇ、きみ？今日こそみりんてゃが勝つから覚悟してね♡</p>
             </div>
         </div>
     </div>
@@ -153,9 +156,9 @@
     <!-- Win/Lose Overlay -->
     <div id="gameOverlay" class="overlay hidden">
         <div class="overlay-content">
-            <img id="resultImage" src="/mirintea/win.png" alt="Result">
-            <p id="resultText">わーーーい！勝利のハグして！！今！！！（圧）</p>
-            <button id="restartButton">もう一度遊ぶ</button>
+            <img id="resultImage" src="/mirintea/win.png" alt="結果">
+            <p id="resultText">きゃはっ♡ みりんてゃの勝ちだよ～！ぎゅーってしてあげるね！</p>
+            <button id="restartButton">もう一度対戦する！</button>
         </div>
     </div>
 
