@@ -299,11 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Make character window draggable
     makeDraggable(mirinteaWindow);
     
-    // Add event listener for close button
+// Add event listener for close button
     document.getElementById('closeBtn').addEventListener('click', () => {
         mirinteaWindow.style.display = 'none';  // toggle → hide に変更
     });
-}); // ★★★ ここに }); を追加して閉じる！ ★★★
+}); // ← ★★★ これを追加するだけ！！ ★★★
 
 // Function to toggle Mirintea window visibility
 function toggleMirinteaWindow() {
