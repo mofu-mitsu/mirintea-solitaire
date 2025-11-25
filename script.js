@@ -1359,35 +1359,11 @@ function attemptSmartMove(col, row) {
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // ★みりんてゃ独自のシャッフルロジック
-    // StockもWasteも空っぽなら、自分の場札の裏カードを回収してStockにする
+    // ★修正箇所：ストックもWasteも空っぽなら、ちゃんとした手順でシャッフルする
+    // ここでさっき追加した autoShuffleMirintea 関数を呼び出す！
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
-        const collect = [];
-        for (let col = 0; col < 7; col++) {
-            const pile = gameState.mirintea.tableau[col];
-            for (let i = 0; i < pile.length; i++) {
-                if (!pile[i].faceUp) {
-                    collect.push(pile[i]);
-                    pile.splice(i, 1);
-                    i--;
-                } else {
-                    break;
-                }
-            }
-        }
-        if (collect.length > 0) {
-            shuffleArray(collect);
-            gameState.mirintea.stock.push(...collect);
-            // 場札のめくり
-            for (let col = 0; col < 7; col++) {
-                const pile = gameState.mirintea.tableau[col];
-                if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
-                    pile[pile.length - 1].faceUp = true;
-                }
-            }
-            updateMirinteaScreen(); // ★みりんてゃ側だけ更新！
-            return;
-        }
+        autoShuffleMirintea();
+        return;
     }
 
     // StockがないけどWasteがあるなら戻す
@@ -1492,8 +1468,8 @@ function mirinteaAI() {
         return;
     }
     
-    // ... (Dialogue logic remains same) ...
-     const playerProgress = calculateProgress('player');
+    // Dialogue logic
+    const playerProgress = calculateProgress('player');
     const mirinteaProgress = calculateProgress('mirintea');
     
     if (mirinteaProgress > playerProgress + 3) {
