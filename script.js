@@ -607,20 +607,19 @@ function updateMirinteaScreen() {
     renderMirinteaTableau();
 }
 
+// Update the renderTableau function
 // Render player's tableau ONLY
 function renderPlayerTableau() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         tableauColumn.innerHTML = '';
         
-        // ★修正：PCでのドラッグ判定を強化するためのスタイル
-        tableauColumn.style.minHeight = '200px'; // 高さをしっかり確保
-        tableauColumn.style.width = '100%';
-        tableauColumn.style.position = 'relative';
-        // 透明なボーダーをつけて当たり判定を広げる
-        tableauColumn.style.border = '2px solid transparent'; 
-        tableauColumn.style.boxSizing = 'border-box';
-
+        // ★修正：線を消してしまう「border」の設定を削除したよ！
+        // 高さだけ確保して、当たり判定をしっかり作る
+        tableauColumn.style.minHeight = '250px'; // Kを置きやすくするために少し長くした
+        tableauColumn.style.width = '100%';      
+        tableauColumn.style.position = 'relative'; 
+        
         for (let row = 0; row < gameState.player.tableau[col].length; row++) {
             const card = gameState.player.tableau[col][row];
             const sourceInfo = { type: 'tableau', col: col, row: row };
@@ -909,7 +908,7 @@ function createCardElement(card, hideDetails = false, source = null) {
 }
 // Draw a card from stock
 function drawFromStock() {
-    // 1. 山札があるなら引く
+    // 1. 山札があるなら普通に引く
     if (gameState.player.stock.length > 0) {
         const card = gameState.player.stock.pop();
         card.faceUp = true;
@@ -918,107 +917,72 @@ function drawFromStock() {
         updatePlayerScreen();
         if (checkWinCondition('player')) showGameOver(true);
     } 
-    // 2. 山札が空で、捨て札があるなら -> ★即シャッフルして山札に戻す！
-    else if (gameState.player.waste.length > 0) {
-        
+    // 2. 山札が空っぽなら -> ★全回収シャッフル発動！
+    else {
         // みりんてゃのセリフ
-        mirinteaDialogue.textContent = "山札切れたね！シャッフルしてあげる♡";
+        mirinteaDialogue.textContent = "手詰まり？全部混ぜ直してあげるっ！♡";
         updateMirinteaImage('doka'); // 応援モード
         
-        // 捨て札を全部回収
-        const collectedCards = [];
-        while (gameState.player.waste.length > 0) {
-            const card = gameState.player.waste.pop();
-            card.faceUp = false; // 裏向きに戻す
-            collectedCards.push(card);
-        }
-        
-        // ★ここでシャッフル！
-        shuffleArray(collectedCards);
-        
-        // 山札に戻す
-        gameState.player.stock.push(...collectedCards);
-        
-        // SEとか鳴らすならここ
-        showRandomDialogue('shuffle');
-        updatePlayerScreen();
-    }
-    // 3. 完全にカードがない場合
-    else {
-        mirinteaDialogue.textContent = "もうカードないよ〜？詰んじゃった？♡";
-        updateMirinteaImage('shy');
+        // ★ここで最強のシャッフルを呼ぶ！
+        autoShufflePlayer();
     }
 }
 
-// ★プレイヤー専用シャッフル関数（修正版）
+
+// ★プレイヤー専用シャッフル関数（完全配り直し版）
 function autoShufflePlayer() {
     const collect = [];
-    const slotsToFill = []; // ★追加：各列に何枚戻せばいいかメモする配列
 
-    // 1. まず捨て札(Waste)を全部回収
+    // 1. 捨て札(Waste)を回収
     while (gameState.player.waste.length > 0) {
-        const card = gameState.player.waste.pop();
-        card.faceUp = false; // 裏向きに戻す
-        collect.push(card);
+        collect.push(gameState.player.waste.pop());
     }
 
-    // 2. 場札(Tableau)の裏向きカードを回収しつつ、その枚数を記録
+    // 2. 山札(Stock)を回収
+    while (gameState.player.stock.length > 0) {
+        collect.push(gameState.player.stock.pop());
+    }
+
+    // 3. ★場札(Tableau)も全回収！（ここがポイント）
     for (let col = 0; col < 7; col++) {
-        const pile = gameState.player.tableau[col];
-        let count = 0;
-
-        // 後ろからじゃなくて前から見て、裏向きを全部引っこ抜く
-        for (let i = 0; i < pile.length; i++) {
-            if (!pile[i].faceUp) {
-                collect.push(pile[i]);
-                pile.splice(i, 1);
-                i--; 
-                count++; // ★ここで枚数をカウント！
-            } else {
-                break; // 表向きが出たらその列の回収は終了
-            }
+        while (gameState.player.tableau[col].length > 0) {
+            // 上から順に取っていく
+            collect.push(gameState.player.tableau[col].pop());
         }
-        slotsToFill[col] = count; // ★「この列には〇〇枚戻す」とメモしておく
     }
 
-    // 3. 回収したカードをシャッフル！
-    if (collect.length > 0) {
-        shuffleArray(collect); 
+    // 4. 全カードを一旦「裏向き」に戻す
+    collect.forEach(card => card.faceUp = false);
 
-        // 4. ★ここが大事！メモした枚数分だけ、場札の「根元」に戻す
-        for (let col = 0; col < 7; col++) {
-            const needToFill = slotsToFill[col];
-            for (let i = 0; i < needToFill; i++) {
-                if (collect.length > 0) {
-                    const card = collect.pop();
-                    card.faceUp = false; // 絶対に裏向き
-                    // unshiftを使って配列の先頭（画面上の奥側）に差し込む
-                    gameState.player.tableau[col].unshift(card);
-                }
+    // 5. 豪快にシャッフル！
+    shuffleArray(collect);
+
+    // 6. 場札に再配布（ソリティアの初期配置と同じルールで配り直す）
+    let cardIndex = 0;
+    for (let col = 0; col < 7; col++) {
+        // 1列目は1枚、2列目は2枚...
+        for (let row = 0; row <= col; row++) {
+            if (cardIndex < collect.length) {
+                const card = collect[cardIndex];
+                // 一番手前だけ表向きにする
+                card.faceUp = (row === col);
+                gameState.player.tableau[col].push(card);
+                cardIndex++;
             }
         }
-
-        // 5. それでも余ったカードをストックに入れる
-        if (collect.length > 0) {
-            gameState.player.stock.push(...collect);
-        }
-        
-        // 場札の列が空っぽになったり、裏向きがなくなった列のトップを表にする
-        // (念の為のチェック)
-        for (let col = 0; col < 7; col++) {
-            const pile = gameState.player.tableau[col];
-            if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
-                pile[pile.length - 1].faceUp = true;
-            }
-        }
-        
-        showRandomDialogue('shuffle');
-        updatePlayerScreen();
-    } else {
-        // 万が一回収できるカードが一切ない場合
-        updatePlayerScreen();
     }
+
+    // 7. 残りを山札にする
+    while (cardIndex < collect.length) {
+        gameState.player.stock.push(collect[cardIndex]);
+        cardIndex++;
+    }
+
+    // エフェクトと画面更新
+    showRandomDialogue('shuffle');
+    updatePlayerScreen();
 }
+
 // ★みりんてゃ専用シャッフル関数（新規追加）
 function autoShuffleMirintea() {
     const collect = [];
