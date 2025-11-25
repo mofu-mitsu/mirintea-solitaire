@@ -773,9 +773,10 @@ function createCardElement(card, hideDetails = false, source = null) {
                     const idx = parseInt(foundation.id.split('-')[2]);
                     if (source.type === 'waste') moveWasteToFoundation(idx);
                     else moveCardToFoundation(idx);
-                } else if (tableau) {
+                else if (tableau) {
                     const col = parseInt(tableau.id.split('-')[2]);
                     if (source.type === 'waste') {
+                        // waste→tableauはそのまま
                         const card = gameState.player.waste[gameState.player.waste.length - 1];
                         if (canMoveToTableau(gameState.player.tableau[col], card)) {
                             gameState.player.waste.pop();
@@ -783,7 +784,7 @@ function createCardElement(card, hideDetails = false, source = null) {
                             renderGame();
                         }
                     } else {
-                        // ★ここを修正！選択状態を強制設定してから移動！
+                        // ★ここを修正！最後の null クリアを削除！！！
                         gameState.selectedCard = {
                             player: 'player',
                             col: source.col,
@@ -791,7 +792,8 @@ function createCardElement(card, hideDetails = false, source = null) {
                             isMulti: source.row < gameState.player.tableau[source.col].length - 1
                         };
                         moveCardToTableau(col);
-                        gameState.selectedCard = null; // クリア
+                        // ← この1行を削除！！！
+                        // gameState.selectedCard = null;   ← 削除！！！
                     }
                 }
             }
