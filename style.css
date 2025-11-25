@@ -259,57 +259,52 @@ body {
     background: white;
 }
 
-/* Character Window - 地雷系みりんてゃ仕様 + 絶対伸びないロック */
+/* Character Window - 小さくて可愛い地雷系仕様（邪魔にならないサイズ） */
 .character-window {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 320px;
-    max-width: 320px;
-    min-width: 320px;           /* ← 追加：最小幅固定 */
-    height: 480px;              /* ← 固定高さに変更 */
-    max-height: 480px;          /* ← 最大も固定 */
+    width: 260px;           /* ← 320px → 260px（超コンパクト！） */
+    max-width: 260px;
+    min-width: 260px;
+    height: 380px;          /* ← 480px → 380px（ちょうどいい高さ！） */
+    max-height: 380px;
     background: linear-gradient(135deg, #fff0f5, #ffe4f0);
     border: 4px solid #ff66b2;
     border-radius: 25px;
     box-shadow: 
-        0 10px 30px rgba(255, 102, 178, 0.4),
-        0 0 20px rgba(255, 182, 193, 0.6);
+        0 8px 25px rgba(255, 102, 178, 0.4),
+        0 0 15px rgba(255, 182, 193, 0.5);
     z-index: 9999;
     overflow: hidden;
     display: flex;
     flex-direction: column;
     resize: none;
     font-family: 'Comic Sans MS', cursive, sans-serif;
-    transform: translateY(0);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .character-window:hover {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
     box-shadow: 
-        0 15px 40px rgba(255, 102, 178, 0.6),
-        0 0 30px rgba(255, 182, 193, 0.8);
+        0 15px 35px rgba(255, 102, 178, 0.6),
+        0 0 25px rgba(255, 182, 193, 0.8);
 }
 
-/* ヘッダー超地雷仕様 */
+/* ヘッダー */
 .character-header {
     background: linear-gradient(45deg, #ff66b2, #ff99cc);
     color: white;
-    padding: 12px 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: move;
-    border-radius: 21px 21px 0 0;
+    padding: 10px 12px;
+    font-size: 15px;
     font-weight: bold;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    border-radius: 21px 21px 0 0;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
 }
 
 .character-header::after {
     content: "♡";
-    margin-left: 8px;
     animation: heartbeat 1.5s infinite;
 }
 
@@ -347,37 +342,29 @@ body {
     opacity: 0.9;
 }
 
+/* 画像小さく可愛く */
 #mirinteaImage {
-    width: 180px;
-    height: 180px;
+    width: 140px;          /* ← 180px → 140px */
+    height: 140px;
     object-fit: cover;
     border-radius: 50%;
-    border: 6px solid #ff99cc;
+    border: 5px solid #ff99cc;
     box-shadow: 
-        0 0 20px rgba(255, 102, 178, 0.8),
-        inset 0 0 20px rgba(255, 255, 255, 0.5);
-    margin-bottom: 15px;
+        0 0 18px rgba(255, 102, 178, 0.7),
+        inset 0 0 15px rgba(255, 255, 255, 0.6);
+    margin: 10px auto;
 }
 
-
-/* セリフボックス地雷全開 */
+/* セリフボックスも小さく */
 .dialogue-box {
+    margin: 0 12px 12px;
+    padding: 12px;
+    min-height: 70px;
+    font-size: 14px;
     background: linear-gradient(135deg, #fff0f5, #ffeef8);
     border: 3px solid #ff66b2;
-    border-radius: 20px;
-    padding: 15px;
-    margin: 0 15px 15px;
-    min-height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    box-shadow: 
-        0 5px 15px rgba(255, 102, 178, 0.3),
-        inset 0 2px 5px rgba(255, 255, 255, 0.7);
-    font-size: 15px;
-    color: #d63384;
-    text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+    border-radius: 18px;
+    box-shadow: 0 4px 12px rgba(255, 102, 178, 0.3);
 }
 
 .dialogue-box::before {
