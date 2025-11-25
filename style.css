@@ -262,7 +262,7 @@ body {
 /* Character Window */
 .character-window {
     position: fixed;
-    resize: none
+    resize: none;
     bottom: 20px;
     right: 20px;
     width: 300px;
