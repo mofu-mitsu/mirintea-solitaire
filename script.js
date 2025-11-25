@@ -2043,8 +2043,9 @@ function addTrickButtonListener() {
 function useTrick() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // 発動条件：ストックも捨て札も空っぽの時だけ！
-    if (gameState.player.stock.length > 0 || gameState.player.waste.length > 0) {
+    // ★修正：発動条件を緩和
+    // 山札(Stock)さえ空なら、捨て札(Waste)に残ってても発動OKにする！
+    if (gameState.player.stock.length > 0) {
         mirinteaDialogue.textContent = "まだ山札があるじゃん！トリックは本当にピンチの時だけだよ？♡";
         updateMirinteaImage('angry');
         return;
@@ -2055,12 +2056,10 @@ function useTrick() {
     
     for (let col = 0; col < 7; col++) {
         const pile = gameState.player.tableau[col];
-        // その列の一番上にある裏向きカード（表向きカードの直下）だけを候補にする
-        // （束の途中をめくるとバグるので、めくって安全なカードだけ選ぶ）
         for (let i = pile.length - 1; i >= 0; i--) {
             if (!pile[i].faceUp) {
                 faceDownCandidates.push({ col: col, row: i });
-                break; // その列からは1枚だけ候補にする
+                break; 
             }
         }
     }
@@ -2086,6 +2085,8 @@ function useTrick() {
     
     // ボタンの演出
     const btn = document.getElementById('trickButton');
-    btn.classList.add('used');
-    setTimeout(() => btn.classList.remove('used'), 500);
+    if(btn) {
+        btn.classList.add('used');
+        setTimeout(() => btn.classList.remove('used'), 500);
+    }
 }
