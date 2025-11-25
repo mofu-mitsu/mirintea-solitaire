@@ -736,79 +736,79 @@ function createCardElement(card, hideDetails = false, source = null) {
         let touchStartY = 0;
         let originalZIndex = '';
         
-        cardElement.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 1) return;
-            e.stopPropagation();
-            const touch = e.touches[0];
-            cardElement.startX = touch.clientX;
-            cardElement.startY = touch.clientY;
-            cardElement.style.transition = 'none';  // ガクガク防止
-            cardElement.style.zIndex = '1000';
-        }, { passive: false });
-        
-        cardElement.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            const dx = touch.clientX - cardElement.startX;
-            const dy = touch.clientY - cardElement.startY;
-            cardElement.style.transform = `translate(${dx}px, ${dy}px)`;
-        }, { passive: false });
-        
-        cardElement.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            cardElement.style.transition = 'transform 0.2s ease-out';  // スムーズに戻る
-            cardElement.style.transform = '';
-            cardElement.style.zIndex = '';
-        
-            const touch = e.changedTouches[0];
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            cardElement.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 1) return;
+                e.stopPropagation();
+                const touch = e.touches[0];
+                cardElement.startX = touch.clientX;
+                cardElement.startY = touch.clientY;
+                cardElement.style.transition = 'none';  // ガクガク防止
+                cardElement.style.zIndex = '1000';
+            }, { passive: false });
             
-            if (target) {
-                const foundation = target.closest('[id^="player-foundation-"]');
-                const tableau = target.closest('[id^="player-tableau-"]');
+            cardElement.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const dx = touch.clientX - cardElement.startX;
+                const dy = touch.clientY - cardElement.startY;
+                cardElement.style.transform = `translate(${dx}px, ${dy}px)`;
+            }, { passive: false });
+            
+            cardElement.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                cardElement.style.transition = 'transform 0.2s ease-out';  // スムーズに戻る
+                cardElement.style.transform = '';
+                cardElement.style.zIndex = '';
+            
+                const touch = e.changedTouches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
                 
-                if (foundation) {
-                    const idx = parseInt(foundation.id.split('-')[2]);
-                    if (source.type === 'waste') moveWasteToFoundation(idx);
-                    else moveCardToFoundation(idx);
-                } else if (tableau) {
-                    const col = parseInt(tableau.id.split('-')[2]);
-                    if (source.type === 'waste') {
-                        const card = gameState.player.waste[gameState.player.waste.length - 1];
-                        if (canMoveToTableau(gameState.player.tableau[col], card)) {
-                            gameState.player.waste.pop();
-                            gameState.player.tableau[col].push(card);
-                            renderGame();
+                if (target) {
+                    const foundation = target.closest('[id^="player-foundation-"]');
+                    const tableau = target.closest('[id^="player-tableau-"]');
+                    
+                    if (foundation) {
+                        const idx = parseInt(foundation.id.split('-')[2]);
+                        if (source.type === 'waste') moveWasteToFoundation(idx);
+                        else moveCardToFoundation(idx);
+                    } else if (tableau) {
+                        const col = parseInt(tableau.id.split('-')[2]);
+                        if (source.type === 'waste') {
+                            const card = gameState.player.waste[gameState.player.waste.length - 1];
+                            if (canMoveToTableau(gameState.player.tableau[col], card)) {
+                                gameState.player.waste.pop();
+                                gameState.player.tableau[col].push(card);
+                                renderGame();
+                            }
+                        } else {
+                            moveCardToTableau(col);
                         }
-                    } else {
-                        moveCardToTableau(col);
                     }
                 }
-            }
-
-    // 画像設定（既存のまま）
-    if (hideDetails) {
-        if (card.faceUp) {
-            cardElement.classList.add('face-up');
-            const fileName = getCardFileName(card);
-            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-            cardElement.style.backgroundSize = 'cover';
-        } else {
-            cardElement.classList.add('back');
-        }
-    } else {
-        if (card.faceUp) {
-            cardElement.classList.add('face-up');
-            const fileName = getCardFileName(card);
-            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-            cardElement.style.backgroundSize = 'cover';
-        } else {
-            cardElement.classList.add('back');
-        }
-    }
     
-    return cardElement;
-}
+        // 画像設定（既存のまま）
+        if (hideDetails) {
+            if (card.faceUp) {
+                cardElement.classList.add('face-up');
+                const fileName = getCardFileName(card);
+                cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
+                cardElement.style.backgroundSize = 'cover';
+            } else {
+                cardElement.classList.add('back');
+            }
+        } else {
+            if (card.faceUp) {
+                cardElement.classList.add('face-up');
+                const fileName = getCardFileName(card);
+                cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
+                cardElement.style.backgroundSize = 'cover';
+            } else {
+                cardElement.classList.add('back');
+            }
+        }
+        
+        return cardElement;
+    }
 
 // Draw a card from stock
 function drawFromStock() {
