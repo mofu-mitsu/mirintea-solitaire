@@ -306,21 +306,31 @@ document.addEventListener('DOMContentLoaded', () => {
 }); 
 
 // Helper: Check if any card in the list can be moved to foundation or tableau
-// カードの束の中に、有効な手があるかチェックする検品係
+// カードの束の中に、有効な手があるかチェックする検品係（デバッグ付き）
 function hasUsefulCard(cards, player) {
     const foundations = gameState[player].foundations;
     const tableau = gameState[player].tableau;
+    
+    console.log(`[検品開始] ${player}のカードをチェック中... 枚数:${cards.length}`);
 
     for (const card of cards) {
         // 組札に置ける？
         for (let i = 0; i < 4; i++) {
-            if (canMoveToFoundation(foundations[i], card)) return true;
+            if (canMoveToFoundation(foundations[i], card)) {
+                console.log(`[発見!] ${getCardFileName(card)} は組札(Foundation-${i})に置けるよ！`);
+                return true;
+            }
         }
         // 場札に置ける？
         for (let col = 0; col < 7; col++) {
-            if (canMoveToTableau(tableau[col], card)) return true;
+            if (canMoveToTableau(tableau[col], card)) {
+                console.log(`[発見!] ${getCardFileName(card)} は場札(Tableau-${col})に置けるよ！`);
+                return true;
+            }
         }
     }
+    
+    console.log(`[残念] ${player}のカードの中には、今すぐ使えるカードがなかったよ...`);
     return false;
 }
 
@@ -896,6 +906,7 @@ function createCardElement(card, hideDetails = false, source = null) {
     return cardElement;
 }
 // Draw a card from stock (Player)
+// Draw a card from stock (Player)
 // 修正版：リサイクル時に有効なカードがなければ即シャッフル！
 function drawFromStock() {
     // 1. 山札があるなら普通に引く
@@ -910,9 +921,9 @@ function drawFromStock() {
     // 2. 山札が空なら、捨て札を山札に戻す前にチェック！
     else if (gameState.player.waste.length > 0) {
         
-        // ★ここが新機能！「捨て札の中に使えるカードある？」って聞く
+        // ★ここでさっきの検品関数を使う！
         if (hasUsefulCard(gameState.player.waste, 'player')) {
-            // あるなら通常通りリサイクル
+            console.log("使えるカードがあるからリサイクルするよ！");
             while (gameState.player.waste.length > 0) {
                 const card = gameState.player.waste.pop();
                 card.faceUp = false; 
@@ -920,19 +931,19 @@ function drawFromStock() {
             }
             updatePlayerScreen();
         } else {
-            // ★ないなら、戻しても意味ないので強制シャッフル発動！
+            console.log("使えるカードがないから強制シャッフル！");
             mirinteaDialogue.textContent = "あ、もう使えるカードないね！シャッフルしよ！♡";
-            updateMirinteaImage('doka'); // ドヤ顔で教えてあげる
+            updateMirinteaImage('doka'); 
             autoShufflePlayer();
         }
     }
     // 3. どっちも空っぽなら
     else {
-        // ここはautoShufflePlayerに任せるか、トリックを促す
         mirinteaDialogue.textContent = "カードなくなっちゃったね…トリック使ってみる？♡";
         updateMirinteaImage('shy');
     }
 }
+
 // ★プレイヤー専用シャッフル関数（修正版）
 function autoShufflePlayer() {
     const collect = [];
@@ -1405,9 +1416,11 @@ function mirinteaAI() {
     // 山札が空で、捨て札があるなら
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
         
-        // ★みりんてゃも検品！
+        console.log("みりんてゃ: 山札切れ。リサイクルするか検討中...");
+        
+        // ★ここで検品！
         if (hasUsefulCard(gameState.mirintea.waste, 'mirintea')) {
-            // 使えるカードがあるなら補充
+            console.log("みりんてゃ: まだ使えるカードがあるからリサイクル！");
             while (gameState.mirintea.waste.length > 0) {
                 const card = gameState.mirintea.waste.pop();
                 card.faceUp = false;
@@ -1415,14 +1428,15 @@ function mirinteaAI() {
             }
             updateMirinteaScreen();
         } else {
-            // ★ないならシャッフル！
+            console.log("みりんてゃ: 使えるカードがないからシャッフル！");
             autoShuffleMirintea();
         }
-        return; 
+        return; // このターンは補充orシャッフルで終わり
     }
 
     // --- B. 詰み防止トリック（本当に何もできない時だけ） ---
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
+        // 場札に裏向きカードがあるなら、無理やり1枚めくる
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
             for (let i = pile.length - 1; i >= 0; i--) {
@@ -1433,16 +1447,14 @@ function mirinteaAI() {
                 }
             }
         }
-        // ここまで来たら本当に手詰まり。shuffleWhenStuckに任せる
         return; 
     }
 
-    // （↓ここから下のロジックは前回のままでOK！）
     let moved = false;
     let foundFoundationMove = true;
     let safetyCount = 0; 
     
-    // --- ① 組札（ゴール）への移動（連続で置くけど、最大10回まで！） ---
+    // --- ① 組札（ゴール）への移動 ---
     while (foundFoundationMove && safetyCount < 10) {
         foundFoundationMove = false;
         safetyCount++; 
@@ -1450,7 +1462,7 @@ function mirinteaAI() {
         // 1-1. 手持ち(Waste) -> 組札
         if (gameState.mirintea.waste.length > 0) {
             const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
-            if (card) { // カードが存在するかチェック
+            if (card) { 
                 for (let i = 0; i < 4; i++) {
                     if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
                         gameState.mirintea.foundations[i].push(gameState.mirintea.waste.pop());
@@ -1473,13 +1485,10 @@ function mirinteaAI() {
                 for (let i = 0; i < 4; i++) {
                     if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
                         gameState.mirintea.foundations[i].push(gameState.mirintea.tableau[col].pop());
-                        
-                        // 下のカードを表にする
                         if (gameState.mirintea.tableau[col].length > 0) {
                             const newTop = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
-                            if (newTop && !newTop.faceUp) newTop.faceUp = true;
+                            if(newTop && !newTop.faceUp) newTop.faceUp = true;
                         }
-                        
                         moved = true;
                         foundFoundationMove = true;
                         updateMirinteaScreen();
@@ -1491,7 +1500,6 @@ function mirinteaAI() {
         }
     }
     
-    // 組札に動かしたら、一旦落ち着く
     if (moved) return;
 
     // --- ② 手持ち（Waste）から場札（Tableau）へ ---
@@ -1523,8 +1531,6 @@ function mirinteaAI() {
         if (firstFaceUpIndex === -1) continue;
 
         const cardToMove = fromPile[firstFaceUpIndex];
-        
-        // 移動する価値があるか判定
         const isWorthMoving = (firstFaceUpIndex > 0 && !fromPile[firstFaceUpIndex - 1].faceUp) || (firstFaceUpIndex === 0 && cardToMove.rank === 'K'); 
         if (firstFaceUpIndex === 0 && cardToMove.rank === 'K') continue;
         if (!isWorthMoving) continue;
@@ -1534,8 +1540,6 @@ function mirinteaAI() {
             if (canMoveToTableau(gameState.mirintea.tableau[toCol], cardToMove)) {
                 const movingCards = fromPile.splice(firstFaceUpIndex);
                 gameState.mirintea.tableau[toCol].push(...movingCards);
-                
-                // 元の列の処理
                 if (gameState.mirintea.tableau[fromCol].length > 0) {
                     const newTop = gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1];
                     if(newTop && !newTop.faceUp) newTop.faceUp = true;
@@ -1555,7 +1559,6 @@ function mirinteaAI() {
         return;
     }
     
-    // 勝利判定
     if (checkWinCondition('mirintea')) {
         showGameOver(false);
     }
