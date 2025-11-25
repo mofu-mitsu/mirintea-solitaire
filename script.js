@@ -613,18 +613,20 @@ function renderPlayerTableau() {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         tableauColumn.innerHTML = '';
         
-        // ★修正：スマホ対策で高さを画面比率(vh)で指定
-        // これで短くならずに、タップ判定もしやすくなるはず！
-        tableauColumn.style.minHeight = '30vh'; 
-        tableauColumn.style.paddingBottom = '50px'; // 下に少し余裕を持たせる
-        
+        // ★修正：PCでのドラッグ判定を強化するためのスタイル
+        tableauColumn.style.minHeight = '200px'; // 高さをしっかり確保
+        tableauColumn.style.width = '100%';
+        tableauColumn.style.position = 'relative';
+        // 透明なボーダーをつけて当たり判定を広げる
+        tableauColumn.style.border = '2px solid transparent'; 
+        tableauColumn.style.boxSizing = 'border-box';
+
         for (let row = 0; row < gameState.player.tableau[col].length; row++) {
             const card = gameState.player.tableau[col][row];
             const sourceInfo = { type: 'tableau', col: col, row: row };
             const cardElement = createCardElement(card, false, sourceInfo);
             
-            // 重なり具合の調整（少し詰め気味にするとスマホで見やすいかも）
-            cardElement.style.top = `${row * 25}px`; // 間隔を少し広げた(20->25)
+            cardElement.style.top = `${row * 25}px`; 
             
             cardElement.addEventListener('click', (e) => {
                 e.stopPropagation();
