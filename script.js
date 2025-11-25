@@ -1355,47 +1355,34 @@ function attemptSmartMove(col, row) {
     return false;
 }
 
-// Mirintea's AI logic
+
+// ==========================================
+// 1. みりんてゃのAIを賢くする修正（順番変更）
+// ==========================================
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // ★修正箇所：ストックもWasteも空っぽなら、ちゃんとした手順でシャッフルする
-    // ここでさっき追加した autoShuffleMirintea 関数を呼び出す！
+    // ストックもWasteも空ならシャッフル（これはそのまま）
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
         autoShuffleMirintea();
         return;
     }
 
-    // StockがないけどWasteがあるなら戻す
+    // StockがないけどWasteがあるなら戻す（これもそのまま）
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
         while (gameState.mirintea.waste.length > 0) {
             const card = gameState.mirintea.waste.pop();
             card.faceUp = false;
             gameState.mirintea.stock.push(card);
         }
-        updateMirinteaScreen(); // ★みりんてゃ側だけ更新！
+        updateMirinteaScreen();
         return;
     }
 
-    // AI Action: Draw from stock (50% chance)
-    if (Math.random() < 0.5 && gameState.mirintea.stock.length > 0) {
-        const card = gameState.mirintea.stock.pop();
-        card.faceUp = true;
-        gameState.mirintea.waste.push(card);
-        
-        if (checkWinCondition('mirintea')) {
-            showGameOver(false);
-            return;
-        }
-        
-        updateMirinteaScreen(); // ★みりんてゃ側だけ更新！
-        showRandomDialogue('idle');
-        return;
-    }
-    
-    // AI Action: Try to move cards
     let moved = false;
-    
+
+    // ★修正ポイント：先に「移動」を試みる！めくるのは最後！
+
     // 1. Waste -> Foundation
     if (gameState.mirintea.waste.length > 0) {
         const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
@@ -1416,6 +1403,7 @@ function mirinteaAI() {
                 for (let i = 0; i < 4; i++) {
                     if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
                         gameState.mirintea.foundations[i].push(gameState.mirintea.tableau[col].pop());
+                        // めくられたカードを表にする
                         if (gameState.mirintea.tableau[col].length > 0 && !gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp) {
                             gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp = true;
                         }
@@ -1448,7 +1436,7 @@ function mirinteaAI() {
         }
     }
     
-    // 4. Flip hidden card
+    // 4. 裏向きカードを表にする
     if (!moved) {
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
@@ -1459,8 +1447,15 @@ function mirinteaAI() {
             }
         }
     }
+
+    // ★修正ポイント：何もできなかった時だけ、山札をめくる！
+    if (!moved && gameState.mirintea.stock.length > 0) {
+        const card = gameState.mirintea.stock.pop();
+        card.faceUp = true;
+        gameState.mirintea.waste.push(card);
+        moved = true;
+    }
     
-    // ★最後のみりんてゃ画面更新
     updateMirinteaScreen();
 
     if (checkWinCondition('mirintea')) {
@@ -1468,7 +1463,7 @@ function mirinteaAI() {
         return;
     }
     
-    // Dialogue logic
+    // ダイアログ表示（ここはそのまま）
     const playerProgress = calculateProgress('player');
     const mirinteaProgress = calculateProgress('mirintea');
     
