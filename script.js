@@ -1719,13 +1719,7 @@ function renderTableau() {
     renderMirinteaTableau();
 }
 
-// Add click event listeners to tableau columns
-function addTableauEventListeners() {
-    for (let col = 0; col < 7; col++) {
-        const tableauColumn = document.getElementById(`player-tableau-${col}`);
-        tableauColumn.addEventListener('click', () => moveCardToTableau(col));
-    }
-}
+
 
 // Add click event listeners to stock pile
 function addStockEventListener() {
