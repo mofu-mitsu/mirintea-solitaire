@@ -253,7 +253,6 @@ const gameOverlay = document.getElementById('gameOverlay');
 const resultText = document.getElementById('resultText');
 const resultImage = document.getElementById('resultImage');
 const restartButton = document.getElementById('restartButton');
-const closeBtn = document.getElementById('closeBtn');
 const mirinteaWindow = document.getElementById('mirinteaWindow');
 
 // Initialize the game
@@ -284,9 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
         nameModal.style.display = 'flex';
     });
     restartButton.addEventListener('click', resetGame);
-    closeBtn.addEventListener('click', () => {
-        mirinteaWindow.style.display = 'none';
-    });
     
     // Make character window draggable
     makeDraggable(mirinteaWindow);
@@ -360,6 +356,9 @@ function startGame() {
     }, 20000); // Show idle dialogue and shuffle check every 20 seconds
     
     showRandomDialogue('start');
+    
+    // Show Mirintea window at game start
+    mirinteaWindow.style.display = 'block';
 }
 
 // Reset the game
@@ -408,6 +407,9 @@ function resetGame() {
             shuffleWhenStuck(); // Check if shuffle is needed
         }
     }, 20000); // Show idle dialogue and shuffle check every 20 seconds
+    
+    // Show Mirintea window on reset
+    mirinteaWindow.style.display = 'block';
 }
 
 // Initialize a deck of cards
@@ -800,6 +802,9 @@ function drawFromStock() {
             gameState.player.stock.push(card);
         }
         renderGame();
+        
+        // Check if shuffle is needed after resetting stock
+        shuffleWhenStuck();
     }
 }
 
@@ -1256,7 +1261,7 @@ function calculateProgress(player) {
 
 // Check if a card can be moved to a tableau column
 function canMoveToTableau(column, card) {
-    // 中段が空なら、K（キング）だけ置ける（ここは合ってるよ！）
+    // If column is empty, only K can be placed
     if (column.length === 0) {
         return card.rank === 'K';
     }
@@ -1264,9 +1269,7 @@ function canMoveToTableau(column, card) {
     // Get the top card of the column
     const topCard = column[column.length - 1];
     
-    // ★修正ポイント★
-    // 「場のカード(topCard)」の1つ下が、「持ってるカード(card)」と同じかチェックする
-    // 前のコード： getLowerRank(card.rank) === topCard.rank （逆だった！）
+    // Card must be opposite color and one rank lower
     return topCard.color !== card.color && getLowerRank(topCard.rank) === card.rank;
 }
 
@@ -1418,6 +1421,9 @@ function showGameOver(playerWon) {
     }
     
     gameOverlay.classList.remove('hidden');
+    
+    // Show Mirintea window on game over
+    mirinteaWindow.style.display = 'block';
 }
 
 // Show a random dialogue
