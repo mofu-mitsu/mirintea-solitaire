@@ -1775,43 +1775,36 @@ function showIdleDialogue() {
 }
 
 // Check if player can make any moves
+// 修正版：山札や捨て札の中身まで厳密にチェックして、本当に詰んでいるか判定する
 function canPlayerMove() {
-    // Check if player can move waste card to foundation
+    // 1. 今すぐ使える捨て札(Waste)のトップが置けるか？
     if (gameState.player.waste.length > 0) {
         const card = gameState.player.waste[gameState.player.waste.length - 1];
+        // 組札へ
         for (let i = 0; i < 4; i++) {
-            if (canMoveToFoundation(gameState.player.foundations[i], card)) {
-                return true;
-            }
+            if (canMoveToFoundation(gameState.player.foundations[i], card)) return true;
         }
-        
-        // ★追加：捨て札から場札へ置けるかもチェックしないと判定漏れする！
+        // 場札へ
         for (let toCol = 0; toCol < 7; toCol++) {
-             if (canMoveToTableau(gameState.player.tableau[toCol], card)) {
-                 return true;
-             }
+             if (canMoveToTableau(gameState.player.tableau[toCol], card)) return true;
         }
     }
     
-    // Check if player can move tableau card to foundation
-    for (let col = 0; col < 7; col++) {
-        if (gameState.player.tableau[col].length > 0) {
-            const card = gameState.player.tableau[col][gameState.player.tableau[col].length - 1];
-            for (let i = 0; i < 4; i++) {
-                if (canMoveToFoundation(gameState.player.foundations[i], card)) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    // Check if player can move tableau card to another tableau column
+    // 2. 場札(Tableau)にあるカードが動かせるか？
     for (let fromCol = 0; fromCol < 7; fromCol++) {
         if (gameState.player.tableau[fromCol].length > 0) {
-            // Check all face-up cards in the column
+            // 表向きのカードをすべてチェック
             for (let row = 0; row < gameState.player.tableau[fromCol].length; row++) {
                 if (gameState.player.tableau[fromCol][row].faceUp) {
                     const card = gameState.player.tableau[fromCol][row];
+                    // 組札へ
+                    for (let i = 0; i < 4; i++) {
+                         // ※場札からは一番上のカードしか組札に行けないので判定
+                        if (row === gameState.player.tableau[fromCol].length - 1) {
+                            if (canMoveToFoundation(gameState.player.foundations[i], card)) return true;
+                        }
+                    }
+                    // 他の場札へ
                     for (let toCol = 0; toCol < 7; toCol++) {
                         if (fromCol !== toCol && canMoveToTableau(gameState.player.tableau[toCol], card)) {
                             return true;
@@ -1822,59 +1815,49 @@ function canPlayerMove() {
         }
     }
     
-    // Check if player can draw from stock
-    // 山札に残ってるなら「まだ引ける＝動ける」判定
-    if (gameState.player.stock.length > 0) {
-        return true;
+    // 3. 【重要】山札(Stock)と捨て札(Waste)の中に「使えるカード」が埋もれているか？
+    // ここが今まで甘かった！全カードをチェックするよ
+    const hiddenCards = [...gameState.player.stock, ...gameState.player.waste];
+    
+    for (const card of hiddenCards) {
+        // もしこのカードが出てきたら、組札に置ける？
+        for (let i = 0; i < 4; i++) {
+            if (canMoveToFoundation(gameState.player.foundations[i], card)) return true;
+        }
+        // もしこのカードが出てきたら、場札に置ける？
+        for (let col = 0; col < 7; col++) {
+            if (canMoveToTableau(gameState.player.tableau[col], card)) return true;
+        }
     }
     
-    // ★削除！
-    // 以前はここで「WasteがあればStockに戻せるからTrue」にしてたけど、
-    // それが無限ループの原因なので削除！
-    // if (gameState.player.waste.length > 0 && gameState.player.stock.length === 0) {
-    //     return true;
-    // }
-    
-    // ここまで来たら本当に何もできない
+    // ここまで調べてダメなら、山札をいくらめくっても無駄＝詰み！
     return false;
 }
+
 // Check if Mirintea can make any moves
 function canMirinteaMove() {
-    // Check if Mirintea can move waste card to foundation
+    // 1. 今すぐ使える捨て札(Waste)のトップ
     if (gameState.mirintea.waste.length > 0) {
         const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
         for (let i = 0; i < 4; i++) {
-            if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                return true;
-            }
+            if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) return true;
         }
-        // ★追加：捨て札から場札へ
         for (let toCol = 0; toCol < 7; toCol++) {
-             if (canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
-                 return true;
-             }
+             if (canMoveToTableau(gameState.mirintea.tableau[toCol], card)) return true;
         }
     }
     
-    // Check if Mirintea can move tableau card to foundation
-    for (let col = 0; col < 7; col++) {
-        if (gameState.mirintea.tableau[col].length > 0) {
-            const card = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
-            for (let i = 0; i < 4; i++) {
-                if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    // Check if Mirintea can move tableau card to another tableau column
+    // 2. 場札(Tableau)の移動
     for (let fromCol = 0; fromCol < 7; fromCol++) {
         if (gameState.mirintea.tableau[fromCol].length > 0) {
-            // Check all face-up cards in the column
             for (let row = 0; row < gameState.mirintea.tableau[fromCol].length; row++) {
                 if (gameState.mirintea.tableau[fromCol][row].faceUp) {
                     const card = gameState.mirintea.tableau[fromCol][row];
+                    for (let i = 0; i < 4; i++) {
+                        if (row === gameState.mirintea.tableau[fromCol].length - 1) {
+                            if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) return true;
+                        }
+                    }
                     for (let toCol = 0; toCol < 7; toCol++) {
                         if (fromCol !== toCol && canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
                             return true;
@@ -1885,15 +1868,17 @@ function canMirinteaMove() {
         }
     }
     
-    // Check if Mirintea can draw from stock
-    if (gameState.mirintea.stock.length > 0) {
-        return true;
-    }
+    // 3. 【重要】山札と捨て札の全チェック
+    const hiddenCards = [...gameState.mirintea.stock, ...gameState.mirintea.waste];
     
-    // ★削除！
-    // if (gameState.mirintea.waste.length > 0 && gameState.mirintea.stock.length === 0) {
-    //    return true;
-    // }
+    for (const card of hiddenCards) {
+        for (let i = 0; i < 4; i++) {
+            if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) return true;
+        }
+        for (let col = 0; col < 7; col++) {
+            if (canMoveToTableau(gameState.mirintea.tableau[col], card)) return true;
+        }
+    }
     
     return false;
 }
