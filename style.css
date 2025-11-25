@@ -262,15 +262,20 @@ body {
 /* Character Window */
 .character-window {
     position: fixed;
-    resize: none;
     bottom: 20px;
     right: 20px;
     width: 300px;
+    max-width: 300px;           /* ← これ追加 */
+    height: auto;               /* ← これ追加 */
+    max-height: 80vh;           /* ← 画面高さの80%まで */
     background: white;
     border-radius: 15px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
     z-index: 9999;
-    overflow: hidden;
+    overflow: hidden;           /* ← これ大事 */
+    display: flex;
+    flex-direction: column;
+    resize: none;               /* ← これも大事 */
 }
 
 .character-header {
