@@ -1271,12 +1271,14 @@ function mirinteaAI() {
     const playerProgress = calculateProgress('player');
     const mirinteaProgress = calculateProgress('mirintea');
     
-    if (mirinteaProgress > playerProgress + 2) {
-        showRandomDialogue('winning');
-    } else if (playerProgress > mirinteaProgress + 2) {
-        showRandomDialogue('losing');
+    if (mirinteaProgress > playerProgress + 3) {
+        showRandomDialogue('winning');  // ドヤ顔
+    } else if (playerProgress > mirinteaProgress + 3) {
+        showRandomDialogue('losing'); // 泣き顔
+    } else if (Math.random() < 0.1) {
+        showRandomDialogue('tsundere'); // 10%でツンデレ顔（照れ）
     } else {
-        showRandomDialogue('idle');
+        showRandomDialogue('idle'); // 通常はidle（でも中でランダム表情）
     }
 }
 
@@ -1445,29 +1447,40 @@ function showGameOver(playerWon) {
     if (playerWon) {
         resultText.textContent = getRandomDialogue('win');
         resultImage.src = '/mirintea/win.png';
-        // Update Mirintea's image to lose when player wins
-        updateMirinteaImage('lose');
+        updateMirinteaImage('lose');   // みりんてゃが負けて悔しがる
     } else {
         resultText.textContent = getRandomDialogue('lose');
         resultImage.src = '/mirintea/lose.png';
-        // Update Mirintea's image to win when player loses
-        updateMirinteaImage('win');
+        updateMirinteaImage('win');    // みりんてゃが勝ってドヤ顔
     }
     
     gameOverlay.classList.remove('hidden');
-    
-    // Show Mirintea window on game over
     mirinteaWindow.style.display = 'block';
 }
 
-// Show a random dialogue
 function showRandomDialogue(type) {
     const dialogue = getRandomDialogue(type);
     if (dialogue) {
         mirinteaDialogue.textContent = dialogue.replace('{name}', gameState.playerName);
-        // Update Mirintea's image based on dialogue type
-        updateMirinteaImage(mirinteaIconMapping[type] || 'default');
     }
+
+    // ★ここを強化！★ すべての状況で表情をちゃんと変える！
+    let imageName = 'default';
+
+    if (type === 'start') imageName = 'default';
+    else if (type === 'winning') imageName = 'doka';     // 勝ち誇ってる
+    else if (type === 'losing') imageName = 'cry';       // 泣いてる
+    else if (type === 'tsundere') imageName = 'shy';     // 照れてる
+    else if (type === 'win') imageName = 'win';          // 勝利ポーズ
+    else if (type === 'lose') imageName = 'lose';        // 悔しがってる
+    else if (type === 'shuffle') imageName = 'angry';    // シャッフルで怒ってる
+    else if (type === 'idle') {
+        // idleのときはランダムで表情変える！
+        const idleFaces = ['default', 'shy', 'doka'];
+        imageName = idleFaces[Math.floor(Math.random() * idleFaces.length)];
+    }
+
+    updateMirinteaImage(imageName);
 }
 
 // Get a random dialogue from a category
