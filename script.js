@@ -1358,29 +1358,27 @@ function attemptSmartMove(col, row) {
 
 
 // ==========================================
-// 1. みりんてゃAI（賢さMAX版）
+// 1. みりんてゃAI（修正版：ちゃんと場札に置くよ！）
 // ==========================================
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // ストック＆廃棄札が両方空なら、みりんてゃも裏技（トリック）を使う
+    // ストック＆廃棄札が空ならトリック（裏技）
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
-        // AI用のトリック処理（シンプルに一番上の裏向きを開ける）
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
-            // 裏向きカードを探して開ける
             for (let i = pile.length - 1; i >= 0; i--) {
                 if (!pile[i].faceUp) {
                     pile[i].faceUp = true;
                     updateMirinteaScreen();
-                    return; // 1ターンに1回だけ
+                    return; 
                 }
             }
         }
         return;
     }
 
-    // 廃棄札があるのにストックが空なら補充
+    // ストック切れ補充
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
         while (gameState.mirintea.waste.length > 0) {
             const card = gameState.mirintea.waste.pop();
@@ -1403,7 +1401,7 @@ function mirinteaAI() {
                 gameState.mirintea.foundations[i].push(gameState.mirintea.waste.pop());
                 moved = true;
                 updateMirinteaScreen();
-                return; // 行動したらターン終了
+                return; 
             }
         }
     }
@@ -1415,7 +1413,6 @@ function mirinteaAI() {
             for (let i = 0; i < 4; i++) {
                 if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
                     gameState.mirintea.foundations[i].push(gameState.mirintea.tableau[col].pop());
-                    // めくられたカードがあれば表にする
                     if (gameState.mirintea.tableau[col].length > 0 && !gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp) {
                         gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1].faceUp = true;
                     }
@@ -1427,33 +1424,56 @@ function mirinteaAI() {
         }
     }
 
-    // --- ② 「意味のある」場札移動のみ行う ---
-    // ※ここが重要！「移動元のカードの下が裏向き」の場合しか移動させない！
-    // これで無限ループ（表向き同士の移動）を防ぐよ！
+    // --- ② 手持ち（Waste）から場札（Tableau）へ ---
+    // ★ここが抜けてたから追加したよ！これで手持ちカードを場に出すようになる！
+    if (gameState.mirintea.waste.length > 0) {
+        const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
+        for (let toCol = 0; toCol < 7; toCol++) {
+            if (canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
+                gameState.mirintea.tableau[toCol].push(gameState.mirintea.waste.pop());
+                moved = true;
+                updateMirinteaScreen();
+                return;
+            }
+        }
+    }
 
+    // --- ③ 場札（Tableau）同士の移動 ---
     for (let fromCol = 0; fromCol < 7; fromCol++) {
         const fromPile = gameState.mirintea.tableau[fromCol];
         if (fromPile.length === 0) continue;
 
-        // 動かそうとしている一番下のカード（束の根元）を探す
-        // みりんてゃはAIなのでシンプルに「一番上の1枚」か「表向きの束」を動かす判定をする
-        // ここでは簡易的に「一番上の1枚」で判定
-        const card = fromPile[fromPile.length - 1];
-        if (!card.faceUp) continue;
+        // 表向きのカードの束を探す（Kなら束ごと動かすとか）
+        // 簡易的に「一番奥の表向きカード」を取得
+        let firstFaceUpIndex = -1;
+        for (let i = 0; i < fromPile.length; i++) {
+            if (fromPile[i].faceUp) {
+                firstFaceUpIndex = i;
+                break;
+            }
+        }
+        if (firstFaceUpIndex === -1) continue;
 
-        // ★この移動に意味はあるか？チェック
-        // 移動元のそのカードの下に「裏向きカード」がある、または「これ以上カードがない（空になる）」なら動かす価値あり
-        const isWorthMoving = (fromPile.length === 1) || (fromPile.length > 1 && !fromPile[fromPile.length - 2].faceUp);
+        const cardToMove = fromPile[firstFaceUpIndex];
 
-        if (!isWorthMoving) continue; // 意味がないならスキップ（無限ループ防止）
+        // 移動する意味があるか？（下に裏向きカードがある、または空き列にKを動かしたい）
+        // 下に裏向きがないなら、基本動かさなくていい（無限ループ防止）
+        const isWorthMoving = (firstFaceUpIndex > 0 && !fromPile[firstFaceUpIndex - 1].faceUp) || (firstFaceUpIndex === 0 && cardToMove.rank === 'K'); 
+        
+        // ただしKの場合は、今の列が既に空き列の先頭なら動かさない
+        if (firstFaceUpIndex === 0 && cardToMove.rank === 'K') continue;
+
+        if (!isWorthMoving) continue;
 
         for (let toCol = 0; toCol < 7; toCol++) {
             if (fromCol === toCol) continue;
             
-            if (canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
-                // 移動実行
-                gameState.mirintea.tableau[toCol].push(gameState.mirintea.tableau[fromCol].pop());
-                // めくられたカードを表にする
+            if (canMoveToTableau(gameState.mirintea.tableau[toCol], cardToMove)) {
+                // 束ごと移動
+                const movingCards = fromPile.splice(firstFaceUpIndex);
+                gameState.mirintea.tableau[toCol].push(...movingCards);
+                
+                // 元の列の新しいトップを表にする
                 if (gameState.mirintea.tableau[fromCol].length > 0 && !gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp) {
                     gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1].faceUp = true;
                 }
@@ -1463,8 +1483,21 @@ function mirinteaAI() {
             }
         }
     }
+    
+    // 裏向きカードを表にする
+    if (!moved) {
+        for (let col = 0; col < 7; col++) {
+            const pile = gameState.mirintea.tableau[col];
+            if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+                pile[pile.length - 1].faceUp = true;
+                moved = true;
+                updateMirinteaScreen();
+                return;
+            }
+        }
+    }
 
-    // --- ③ どこも動かせないなら、山札をめくる ---
+    // --- ④ どこも動かせないなら、山札をめくる ---
     if (!moved && gameState.mirintea.stock.length > 0) {
         const card = gameState.mirintea.stock.pop();
         card.faceUp = true;
@@ -1473,7 +1506,6 @@ function mirinteaAI() {
         return;
     }
     
-    // 勝利判定
     if (checkWinCondition('mirintea')) {
         showGameOver(false);
     }
