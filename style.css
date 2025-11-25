@@ -26,7 +26,7 @@ body {
 /* Game Container */
 .game-container { 
     display: flex; 
-    justify-content: center; /* PCでは中央寄せ */
+    justify-content: center; 
     padding: 20px; 
     gap: 20px; 
 }
@@ -88,10 +88,9 @@ body {
     min-height: 60vh; 
 }
 
-/* ★ここ修正！列の区切りを分かりやすくしたよ！ */
+/* 列の区切り */
 .tableau-column {
     width: 13%; 
-    /* うっすら白背景を入れて、枠線を少し濃くした */
     background: rgba(255, 255, 255, 0.4);
     border: 2px solid rgba(255, 102, 178, 0.5); 
     position: relative;
@@ -136,11 +135,12 @@ body {
     z-index: 1;
 }
 
-/* ★スマホ用レイアウト（大きく変更！） */
+/* ★スマホ用レイアウト（ここ修正！） */
 @media (max-width: 768px) {
     /* 縦並びにする */
     .game-container {
-        flex-direction: column-reverse; /* 自分のボードを下、みりんてゃを上に */
+        /* ★column-reverseをやめて普通のcolumnにする！これでプレイヤーが上、みりんてゃが下になるよ */
+        flex-direction: column; 
         align-items: center;
         padding: 10px;
     }
@@ -149,30 +149,31 @@ body {
         width: 100%;
         max-width: none;
         margin-bottom: 30px;
-        min-height: 80vh; /* スマホなら少し高さ抑えめでもOK */
+        min-height: 80vh; 
     }
 
-    /* カードサイズを画面幅に合わせて大きくする！(vw使用) */
+    /* カードサイズ調整 */
     .card, .foundation, .stock, .waste {
-        width: 11vw;  /* 画面幅の11%くらいの大きさ */
-        height: 15.5vw; /* 比率を維持 */
-        max-width: 70px; /* PCサイズより大きくはならないように制限 */
+        width: 11vw;  
+        height: 15.5vw; 
+        max-width: 70px; 
         max-height: 100px;
     }
 
-    /* 上段の高さをカードに合わせて調整 */
     .top-row, .bottom-controls {
         height: auto;
         padding-bottom: 10px;
     }
 
-    /* みりんてゃウィンドウの調整（スマホだと邪魔にならないように少し小さく） */
+    /* みりんてゃウィンドウ（スマホ用） */
     .character-window {
         width: 150px;
         height: 150px !important;
+        /* スマホの時は右下固定で見やすく */
         right: 10px;
-        top: auto;
-        bottom: 10px; /* スマホなら下固定の方が見やすいかも？ */
+        left: auto !important; /* スマホでは位置固定しちゃう */
+        top: auto !important;
+        bottom: 10px; 
     }
     #mirinteaImage { width: 80px; height: 80px; }
     .dialogue-box { font-size: 11px; min-height: 40px; padding: 5px;}
@@ -193,14 +194,20 @@ body {
 .overlay-content img { width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin-bottom: 20px; }
 .overlay-content p { font-size: 20px; color: #ff3399; margin-bottom: 20px; font-weight: bold; }
 
-/* キャラクターウィンドウ */
+/* ★キャラクターウィンドウ（ここ修正！ドラッグできるように！） */
 .character-window {
     position: fixed; 
-    /* 上からの位置で固定して、伸びるのを防止 */
+    
+    /* 上からの位置（伸び防止） */
     top: calc(100vh - 240px); 
-    right: 20px;
+    
+    /* ★修正ポイント！rightを使わずにleftで場所を決める！ */
+    /* これでドラッグのプログラムと喧嘩しなくなるよ！ */
+    /* 画面の幅(100vw)からウィンドウの幅+余白を引いた位置＝右側 */
+    left: calc(100vw - 230px);
+    right: auto; /* rightは無効化 */
+
     width: 200px; 
-    /* 高さを固定！これで伸びない！ */
     height: 200px !important; 
     
     background: linear-gradient(135deg, #fff0f5, #ffe4f0);
@@ -210,10 +217,11 @@ body {
     z-index: 9999;
     display: flex; flex-direction: column;
 }
+
 .character-header {
     background: #ff66b2; color: white; padding: 10px;
     border-radius: 15px 15px 0 0; display: flex; justify-content: space-between;
-    cursor: move;
+    cursor: move; /* カーソルが動かせるマークになるよ */
 }
 .character-content { padding: 10px; text-align: center; }
 #mirinteaImage { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #ff99cc; }
