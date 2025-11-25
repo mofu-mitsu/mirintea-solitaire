@@ -262,13 +262,14 @@ body {
 /* Character Window */
 .character-window {
     position: fixed;
+    resize: none
     bottom: 20px;
     right: 20px;
     width: 300px;
     background: white;
     border-radius: 15px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-    z-index: 100;
+    z-index: 9999;
     overflow: hidden;
 }
 
