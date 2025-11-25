@@ -754,61 +754,63 @@ function createCardElement(card, hideDetails = false, source = null) {
                 cardElement.style.transform = `translate(${dx}px, ${dy}px)`;
             }, { passive: false });
             
-            cardElement.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                cardElement.style.transition = 'transform 0.2s ease-out';  // スムーズに戻る
-                cardElement.style.transform = '';
-                cardElement.style.zIndex = '';
+        cardElement.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            cardElement.style.transition = 'transform 0.2s ease-out';
+            cardElement.style.transform = '';
+            cardElement.style.zIndex = '';
+
+            const touch = e.changedTouches[0];
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
             
-                const touch = e.changedTouches[0];
-                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            if (target) {
+                const foundation = target.closest('[id^="player-foundation-"]');
+                const tableau = target.closest('[id^="player-tableau-"]');
                 
-                if (target) {
-                    const foundation = target.closest('[id^="player-foundation-"]');
-                    const tableau = target.closest('[id^="player-tableau-"]');
-                    
-                    if (foundation) {
-                        const idx = parseInt(foundation.id.split('-')[2]);
-                        if (source.type === 'waste') moveWasteToFoundation(idx);
-                        else moveCardToFoundation(idx);
-                    } else if (tableau) {
-                        const col = parseInt(tableau.id.split('-')[2]);
-                        if (source.type === 'waste') {
-                            const card = gameState.player.waste[gameState.player.waste.length - 1];
-                            if (canMoveToTableau(gameState.player.tableau[col], card)) {
-                                gameState.player.waste.pop();
-                                gameState.player.tableau[col].push(card);
-                                renderGame();
-                            }
-                        } else {
-                            moveCardToTableau(col);
+                if (foundation) {
+                    const idx = parseInt(foundation.id.split('-')[2]);
+                    if (source.type === 'waste') moveWasteToFoundation(idx);
+                    else moveCardToFoundation(idx);
+                } else if (tableau) {
+                    const col = parseInt(tableau.id.split('-')[2]);
+                    if (source.type === 'waste') {
+                        const card = gameState.player.waste[gameState.player.waste.length - 1];
+                        if (canMoveToTableau(gameState.player.tableau[col], card)) {
+                            gameState.player.waste.pop();
+                            gameState.player.tableau[col].push(card);
+                            renderGame();
                         }
+                    } else {
+                        moveCardToTableau(col);
                     }
                 }
-    
-        // 画像設定（既存のまま）
-        if (hideDetails) {
-            if (card.faceUp) {
-                cardElement.classList.add('face-up');
-                const fileName = getCardFileName(card);
-                cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-                cardElement.style.backgroundSize = 'cover';
-            } else {
-                cardElement.classList.add('back');
             }
+        });   // ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ← ←
+              // ← ここに }) が足りなかった！！！！これで関数が終わる！！！
+
+    // 画像設定（これ以降は関数外に出てたせいでエラーだった）
+    if (hideDetails) {
+        if (card.faceUp) {
+            cardElement.classList.add('face-up');
+            const fileName = getCardFileName(card);
+            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
+            cardElement.style.backgroundSize = 'cover';
         } else {
-            if (card.faceUp) {
-                cardElement.classList.add('face-up');
-                const fileName = getCardFileName(card);
-                cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
-                cardElement.style.backgroundSize = 'cover';
-            } else {
-                cardElement.classList.add('back');
-            }
+            cardElement.classList.add('back');
         }
-        
-        return cardElement;
+    } else {
+        if (card.faceUp) {
+            cardElement.classList.add('face-up');
+            const fileName = getCardFileName(card);
+            cardElement.style.backgroundImage = `url('cards/${fileName}.png')`;
+            cardElement.style.backgroundSize = 'cover';
+        } else {
+            cardElement.classList.add('back');
+        }
     }
+    
+    return cardElement;
+}   // ← createCardElement の閉じ括弧もちゃんとある！！
 
 // Draw a card from stock
 function drawFromStock() {
