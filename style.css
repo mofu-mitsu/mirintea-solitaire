@@ -135,11 +135,10 @@ body {
     z-index: 1;
 }
 
-/* ★スマホ用レイアウト（ここ修正！） */
+/* ★スマホ用レイアウト */
 @media (max-width: 768px) {
-    /* 縦並びにする */
+    /* 縦並び：columnで上がプレイヤー、下がみりんてゃ */
     .game-container {
-        /* ★column-reverseをやめて普通のcolumnにする！これでプレイヤーが上、みりんてゃが下になるよ */
         flex-direction: column; 
         align-items: center;
         padding: 10px;
@@ -165,18 +164,27 @@ body {
         padding-bottom: 10px;
     }
 
-    /* みりんてゃウィンドウ（スマホ用） */
+    /* ★修正：スマホ用みりんてゃウィンドウ */
+    /* !importantを削除して、ドラッグ操作（top/leftの変更）を受け付けるようにしたよ！ */
     .character-window {
-        width: 150px;
-        height: 150px !important;
-        /* スマホの時は右下固定で見やすく */
+        width: 160px; /* 少し大きく */
+        height: 220px !important; /* 縦長にして文字が入るように！ */
+        
+        /* 初期位置：右下 */
+        left: auto;
+        top: auto;
+        bottom: 10px;
         right: 10px;
-        left: auto !important; /* スマホでは位置固定しちゃう */
-        top: auto !important;
-        bottom: 10px; 
     }
-    #mirinteaImage { width: 80px; height: 80px; }
-    .dialogue-box { font-size: 11px; min-height: 40px; padding: 5px;}
+    
+    #mirinteaImage { width: 90px; height: 90px; }
+    /* 文字エリアをスクロール可能に */
+    .dialogue-box { 
+        font-size: 12px; 
+        padding: 8px;
+        flex-grow: 1; /* 余ったスペースを全部使う */
+        overflow-y: auto; /* 文字が多いときはスクロール */
+    }
 }
 
 /* オーバーレイ */
@@ -194,35 +202,68 @@ body {
 .overlay-content img { width: 200px; height: 200px; border-radius: 50%; object-fit: cover; margin-bottom: 20px; }
 .overlay-content p { font-size: 20px; color: #ff3399; margin-bottom: 20px; font-weight: bold; }
 
-/* ★キャラクターウィンドウ（ここ修正！ドラッグできるように！） */
+/* ★キャラクターウィンドウ（共通設定） */
 .character-window {
     position: fixed; 
     
-    /* 上からの位置（伸び防止） */
-    top: calc(100vh - 240px); 
-    
-    /* ★修正ポイント！rightを使わずにleftで場所を決める！ */
-    /* これでドラッグのプログラムと喧嘩しなくなるよ！ */
-    /* 画面の幅(100vw)からウィンドウの幅+余白を引いた位置＝右側 */
-    left: calc(100vw - 230px);
-    right: auto; /* rightは無効化 */
+    /* PCでの初期位置（ドラッグで上書きされる） */
+    top: calc(100vh - 250px); 
+    left: calc(100vw - 250px);
+    right: auto;
 
-    width: 200px; 
-    height: 200px !important; 
+    width: 220px; 
+    height: 250px; 
     
     background: linear-gradient(135deg, #fff0f5, #ffe4f0);
     border: 4px solid #ff66b2;
     border-radius: 20px;
     box-shadow: 0 12px 40px rgba(255,102,178,0.5);
     z-index: 9999;
-    display: flex; flex-direction: column;
+    
+    /* フレックスボックスにして中身を整理 */
+    display: flex; 
+    flex-direction: column;
 }
 
 .character-header {
     background: #ff66b2; color: white; padding: 10px;
     border-radius: 15px 15px 0 0; display: flex; justify-content: space-between;
-    cursor: move; /* カーソルが動かせるマークになるよ */
+    cursor: move; /* ドラッグできるマーク */
+    flex-shrink: 0;
 }
-.character-content { padding: 10px; text-align: center; }
-#mirinteaImage { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #ff99cc; }
-.dialogue-box { background: white; padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 14px; color: #d63384; min-height: 60px; }
+
+.character-content { 
+    padding: 10px; 
+    text-align: center; 
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+#mirinteaImage { 
+    width: 100px; height: 100px; 
+    border-radius: 50%; 
+    object-fit: cover; 
+    border: 3px solid #ff99cc; 
+    margin: 0 auto 10px;
+    flex-shrink: 0;
+}
+
+.dialogue-box { 
+    background: white; 
+    padding: 10px; 
+    border-radius: 10px; 
+    font-size: 14px; 
+    color: #d63384; 
+    
+    /* 縦に並ぶように設定 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* 文字が見えるように高さを確保 */
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0; /* Flexboxの子要素でスクロールさせるコツ */
+}
