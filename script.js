@@ -216,7 +216,7 @@ const mirinteaDialogues = {
     idle: [
         "ねぇねぇ{name}、見て！このカードの並びかわいくない？",
         "ちょっと！進めないで！あたしのこと見て！！",
-        "{name}が真剣にすると…なんかちょっと嫉妬するんだけど",
+        "｛name}が真剣にすると…なんかちょっと嫉妬するんだけど",
         "負けたくないのに…勝ちたいのに…好きなのに…なんなの〜〜！！",
         "ん？落ち込んでる？ギューしてあげよっか？",
         "うわ、今の配置めっちゃ可愛い…スクショしたい",
@@ -237,6 +237,18 @@ const mirinteaDialogues = {
         "ねぇ、カードを再配置する？",
         "あたしも置く場所ないよ…もう一回？"
     ]
+};
+
+// Mirintea icon mapping based on dialogue type
+const mirinteaIconMapping = {
+    start: 'default',
+    winning: 'doka',
+    losing: 'cry',
+    tsundere: 'shy',
+    win: 'win',
+    lose: 'lose',
+    idle: 'default',
+    shuffle: 'angry'
 };
 
 // DOM Elements
@@ -286,13 +298,29 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Make character window draggable
     makeDraggable(mirinteaWindow);
+    
+    // Add event listener for close button
+    document.getElementById('closeBtn').addEventListener('click', toggleMirinteaWindow);
 });
+
+// Function to toggle Mirintea window visibility
+function toggleMirinteaWindow() {
+    if (mirinteaWindow.style.display === 'none') {
+        mirinteaWindow.style.display = 'block';
+    } else {
+        mirinteaWindow.style.display = 'none';
+    }
+}
 
 // Make an element draggable
 function makeDraggable(element) {
     let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
     
+    // PC用のドラッグ操作
     element.querySelector('.drag-handle').onmousedown = dragMouseDown;
+    
+    // スマホ用のドラッグ操作
+    element.querySelector('.drag-handle').ontouchstart = dragTouchStart;
     
     function dragMouseDown(e) {
         e.preventDefault();
@@ -302,6 +330,17 @@ function makeDraggable(element) {
         document.onmouseup = closeDragElement;
         // Call a function whenever the cursor moves
         document.onmousemove = elementDrag;
+    }
+    
+    function dragTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        // Get the touch position at startup
+        pos3 = touch.clientX;
+        pos4 = touch.clientY;
+        document.ontouchend = closeDragElement;
+        // Call a function whenever the touch moves
+        document.ontouchmove = elementTouchMove;
     }
     
     function elementDrag(e) {
@@ -316,10 +355,25 @@ function makeDraggable(element) {
         element.style.left = (element.offsetLeft - pos1) + "px";
     }
     
+    function elementTouchMove(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        // Calculate the new touch position
+        pos1 = pos3 - touch.clientX;
+        pos2 = pos4 - touch.clientY;
+        pos3 = touch.clientX;
+        pos4 = touch.clientY;
+        // Set the element's new position
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+    }
+    
     function closeDragElement() {
-        // Stop moving when mouse button is released
+        // Stop moving when mouse button is released or touch ends
         document.onmouseup = null;
         document.onmousemove = null;
+        document.ontouchend = null;
+        document.ontouchmove = null;
     }
 }
 
@@ -359,6 +413,8 @@ function startGame() {
     
     // Show Mirintea window at game start
     mirinteaWindow.style.display = 'block';
+    // Update Mirintea's image to default at game start
+    updateMirinteaImage('default');
 }
 
 // Reset the game
@@ -410,6 +466,8 @@ function resetGame() {
     
     // Show Mirintea window on reset
     mirinteaWindow.style.display = 'block';
+    // Update Mirintea's image to default on reset
+    updateMirinteaImage('default');
 }
 
 // Initialize a deck of cards
@@ -1415,9 +1473,13 @@ function showGameOver(playerWon) {
     if (playerWon) {
         resultText.textContent = getRandomDialogue('win');
         resultImage.src = '/mirintea/win.png';
+        // Update Mirintea's image to lose when player wins
+        updateMirinteaImage('lose');
     } else {
         resultText.textContent = getRandomDialogue('lose');
         resultImage.src = '/mirintea/lose.png';
+        // Update Mirintea's image to win when player loses
+        updateMirinteaImage('win');
     }
     
     gameOverlay.classList.remove('hidden');
@@ -1431,6 +1493,8 @@ function showRandomDialogue(type) {
     const dialogue = getRandomDialogue(type);
     if (dialogue) {
         mirinteaDialogue.textContent = dialogue.replace('{name}', gameState.playerName);
+        // Update Mirintea's image based on dialogue type
+        updateMirinteaImage(mirinteaIconMapping[type] || 'default');
     }
 }
 
