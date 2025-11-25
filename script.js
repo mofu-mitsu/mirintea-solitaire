@@ -1349,39 +1349,42 @@ function addFoundationEventListeners() {
     }
 }
 
-// Add drag and drop event listeners to tableau columns
+// Add event listeners to tableau columns (ドラッグ&ドロップとクリック両対応版！)
 function addTableauEventListeners() {
     for (let col = 0; col < 7; col++) {
         const tableauColumn = document.getElementById(`player-tableau-${col}`);
         
-        // ★修正：dragoverで確実に許可を出す！
+        // 1. ドラッグして乗っかった時（これがないと禁止マークが出る！）
         tableauColumn.addEventListener('dragover', (e) => {
-            e.preventDefault(); // 必須：これがないと禁止マークになる
+            e.preventDefault(); 
             e.stopPropagation();
-            e.dataTransfer.dropEffect = 'move'; // カーソルを「移動」にする
+            e.dataTransfer.dropEffect = 'move';
             return false;
         });
 
-        // dragenterも念のため許可
+        // 2. ドラッグして入った時
         tableauColumn.addEventListener('dragenter', (e) => {
             e.preventDefault();
             e.stopPropagation();
         });
         
+        // 3. ドロップした時（Kを空の列に置くために必須！）
         tableauColumn.addEventListener('drop', (e) => {
             e.preventDefault();
             e.stopPropagation();
             handleDropOnTableau(e, col);
         });
         
-        // 背景クリックで移動（K用）
+        // 4. クリックした時（Kを自動で移動させる用）
         tableauColumn.addEventListener('click', (e) => {
              e.stopPropagation();
-             if (gameState.selectedCard) moveCardToTableau(col);
+             // 選択中のカードがあれば、この列に移動を試みる
+             if (gameState.selectedCard) {
+                 moveCardToTableau(col);
+             }
         });
     }
 }
-
 // ★新機能：ドロップ処理をまとめた関数（カードへのドロップも列へのドロップもこれを使う）
 function handleDropOnTableau(e, targetCol) {
     const json = e.dataTransfer.getData('text/plain');
