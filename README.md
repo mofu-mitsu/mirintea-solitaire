@@ -68,4 +68,5 @@ You can customize Mirintea's dialogues by modifying the `mirinteaDialogues` obje
 ## Credits
 
 - Card images: https://github.com/hayeah/playing-cards-assets
-- Character design: Created by [Your Name]
+
+- Character design: Created by [もふみつ]
