@@ -934,8 +934,13 @@ function createCardElement(card, hideDetails = false, source = null) {
 
     return cardElement;
 }
-// Draw a card from stock
-function drawFromStock() {
+// Draw a card from stock (修正版：連打防止機能つき)
+function drawFromStock(e) {
+    // もしクリックイベント情報(e)があれば、親要素への伝播を止める（重複反応防止！）
+    if (e && e.stopPropagation) {
+        e.stopPropagation();
+    }
+
     // 1. 山札があるなら普通に引く
     if (gameState.player.stock.length > 0) {
         const card = gameState.player.stock.pop();
@@ -945,33 +950,30 @@ function drawFromStock() {
         updatePlayerScreen();
         if (checkWinCondition('player')) showGameOver(true);
     } 
-    // 2. 山札が空っぽなら -> ★今回の新しいシャッフル発動！
+    // 2. 山札が空っぽなら -> フェア・シャッフル発動！
     else {
-        // 捨て札も無いなら何もしない（本当に何もない時）
+        // 捨て札も無いなら何もしない
         if (gameState.player.waste.length === 0) return;
 
-        // フェア・シャッフル実行！
         performFairShuffle('player');
-        
-        // シャッフル演出音とか入れたらもっと良さそう！
         showRandomDialogue('shuffle'); 
     }
 }
 
 // ==========================================
-// ★公平なシャッフル機能（修正完了版！）
+// ★公平なシャッフル機能（安全装置強化版！）
 // ==========================================
 function performFairShuffle(who) {
     const state = gameState[who];
     const collect = [];
-    const slotsToFill = []; // 場札の「裏向きカード」が何枚あったかメモする場所
+    const slotsToFill = []; 
 
     console.log(`[Shuffle] ${who}のデッキと裏向きカードを回収して混ぜます！`);
 
     // 1. 捨て札(Waste)を全回収
     while (state.waste.length > 0) {
         const card = state.waste.pop();
-        card.faceUp = false; // 裏に戻す
+        card.faceUp = false; 
         collect.push(card);
     }
 
@@ -985,18 +987,17 @@ function performFairShuffle(who) {
         const pile = state.tableau[col];
         let faceDownCount = 0;
         
-        // 下から順にチェックして、裏向きなら回収
         while (pile.length > 0 && !pile[0].faceUp) {
-            collect.push(pile.shift()); // 先頭から抜く
+            collect.push(pile.shift()); 
             faceDownCount++;
         }
         slotsToFill[col] = faceDownCount;
     }
 
-    // 4. 回収したカードを豪快にシャッフル！
+    // 4. シャッフル！
     shuffleArray(collect);
 
-    // 5. 元あった場所に「裏向き」で戻す
+    // 5. 場札に「裏向き」で戻す
     for (let col = 0; col < 7; col++) {
         const count = slotsToFill[col];
         for (let i = 0; i < count; i++) {
@@ -1009,18 +1010,18 @@ function performFairShuffle(who) {
     }
 
     // 6. 残りを新しい山札(Stock)にする
+    // ★ここを修正！山札に入れる時、念には念を入れて「裏向き」を確定させる！
     while (collect.length > 0) {
-        state.stock.push(collect.pop());
+        const card = collect.pop();
+        card.faceUp = false; // ← 絶対に裏にする！
+        state.stock.push(card);
     }
 
-    // ★★★ ここが追加した修正ポイント！ ★★★
-    // 7. 最後に「各列の一番上が裏向きなら、表にする」処理を入れる！
-    // これがないと、シャッフル後にめくれないカードが出ちゃうんだ
+    // 7. 各列の一番上が裏向きなら、表にする
     for (let col = 0; col < 7; col++) {
         const pile = state.tableau[col];
-        // 列にカードがあって、一番上が裏向きなら
         if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
-            pile[pile.length - 1].faceUp = true; // 強制的にめくる！
+            pile[pile.length - 1].faceUp = true;
         }
     }
 
