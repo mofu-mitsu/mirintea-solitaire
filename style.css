@@ -11,17 +11,86 @@ body {
     color: #333;
 }
 
-/* モーダル類 */
-.modal { display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
-.modal-content { background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-width: 400px; width: 90%; }
-.modal-content h2 { margin-bottom: 20px; color: #ff66b2; }
-#playerName { width: 100%; padding: 12px; margin-bottom: 20px; border: 2px solid #ff66b2; border-radius: 8px; font-size: 16px; }
-#startButton, #closeRulesButton, #restartButton {
-    background: #ff66b2; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; width: 100%; margin-top: 10px;
+/* ルール説明モーダルのスタイル修正 */
+.rules-modal {
+    max-width: 500px; /* 横幅を少し広げる */
+    width: 90%;
+    max-height: 80vh; /* 画面からはみ出さないように */
+    display: flex;
+    flex-direction: column;
+    padding: 0; /* 内側の余白は中身で調整 */
+    overflow: hidden; /* はみ出し防止 */
+    border: 3px solid #ff99cc; /* ピンクの枠線 */
+    background: #fff0f5; /* 薄いピンクの背景 */
 }
-#startButton:hover, #closeRulesButton:hover, #restartButton:hover { background: #ff3399; }
-.rules-button { background: #66ccff; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; width: 100%; }
-.rules-button:hover { background: #3399cc; }
+
+.rules-modal h2 {
+    margin: 0;
+    padding: 15px;
+    background: #ff66b2;
+    color: white;
+    font-size: 20px;
+    border-radius: 12px 12px 0 0; /* 上だけ丸く */
+    flex-shrink: 0;
+}
+
+.rules-content {
+    padding: 20px;
+    overflow-y: auto; /* 縦スクロールを許可 */
+    text-align: left; /* 左揃えにして読みやすく！ */
+    line-height: 1.6; /* 行間を空ける */
+    font-size: 15px;
+    color: #555;
+    flex-grow: 1; /* 余ったスペースを使う */
+}
+
+/* スクロールバーも可愛くする */
+.rules-content::-webkit-scrollbar {
+    width: 8px;
+}
+.rules-content::-webkit-scrollbar-track {
+    background: #ffe6f0;
+}
+.rules-content::-webkit-scrollbar-thumb {
+    background: #ff99cc;
+    border-radius: 4px;
+}
+
+.rules-content h3 {
+    color: #ff3399;
+    border-bottom: 2px dashed #ff99cc;
+    padding-bottom: 5px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.rules-content p, .rules-content ul {
+    margin-bottom: 10px;
+}
+
+.rules-content ul {
+    padding-left: 20px;
+}
+
+/* 閉じるボタン */
+#closeRulesButton {
+    margin: 15px;
+    width: calc(100% - 30px);
+    background: #ff66b2;
+    flex-shrink: 0;
+}
+
+/* 右上の×ボタン */
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    color: white;
+    cursor: pointer;
+    z-index: 10;
+}
 
 /* Game Container */
 .game-container { 
