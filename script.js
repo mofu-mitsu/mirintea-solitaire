@@ -1536,20 +1536,20 @@ function attemptSmartMove(col, row) {
 }
 
 
-// 1. みりんてゃAI（修正版：みりんてゃもトリックを使うよ！）
+// 1. みりんてゃAI（強化版：連続行動＆賢さアップ！）
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // --- A. 山札補充 ---
+    // --- A. 山札補充判定 ---
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
-        console.log("みりんてゃ: 山札切れ。シャッフルタイム！");
+        // 山札が空で捨て札があるなら即シャッフル（再利用）
         performFairShuffle('mirintea');
         return; 
     }
 
-    // --- B. 詰み防止トリック（みりんてゃVer） ---
-    // 山札も捨て札もない時、裏向きカードを強奪する！
+    // --- B. 詰み防止トリック ---
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
+        // 詰んだ時だけこっそり裏技
         let faceDownCandidates = [];
         for (let col = 0; col < 7; col++) {
             const pile = gameState.mirintea.tableau[col];
@@ -1561,131 +1561,140 @@ function mirinteaAI() {
         }
 
         if (faceDownCandidates.length > 0) {
-            // ランダムに奪う
             const target = faceDownCandidates[Math.floor(Math.random() * faceDownCandidates.length)];
             const stolenCard = gameState.mirintea.tableau[target.col].splice(target.row, 1)[0];
             stolenCard.faceUp = true;
             gameState.mirintea.waste.push(stolenCard);
-            
             updateMirinteaScreen();
-            console.log("みりんてゃ: 裏向きカードを強奪して手札にした！");
             return; 
         }
     }
 
-    // ... (以下の思考ロジックは変更なしでOK) ...
-    let moved = false;
-    let foundFoundationMove = true;
-    let safetyCount = 0; 
-    
-    // --- ① 組札（ゴール）への移動 ---
-    while (foundFoundationMove && safetyCount < 10) {
-        foundFoundationMove = false;
-        safetyCount++; 
+    // --- C. 行動ループ（動ける限り動き続ける！） ---
+    let actionsTaken = 0;
+    const MAX_ACTIONS_PER_TURN = 5; // 1回の思考で最大5手まで連続で動く
 
-        // 1-1. 手持ち(Waste) -> 組札
+    while (actionsTaken < MAX_ACTIONS_PER_TURN) {
+        let movedThisLoop = false;
+
+        // 優先度1: 【勝利確定】組札（右上のゴール）へ移動
+        // 1-1. Waste -> Foundation
         if (gameState.mirintea.waste.length > 0) {
             const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
-            if (card) { 
-                for (let i = 0; i < 4; i++) {
-                    if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                        gameState.mirintea.foundations[i].push(gameState.mirintea.waste.pop());
-                        moved = true;
-                        foundFoundationMove = true;
-                        updateMirinteaScreen();
-                        break;
-                    }
+            for (let i = 0; i < 4; i++) {
+                if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
+                    gameState.mirintea.foundations[i].push(gameState.mirintea.waste.pop());
+                    updateMirinteaScreen();
+                    movedThisLoop = true;
+                    break;
                 }
             }
-            if (foundFoundationMove) continue;
+            if (movedThisLoop) { actionsTaken++; continue; }
         }
-        
-        // 1-2. 場札(Tableau) -> 組札
+
+        // 1-2. Tableau -> Foundation
         for (let col = 0; col < 7; col++) {
-            if (gameState.mirintea.tableau[col].length > 0) {
-                const card = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
-                if (!card) continue;
-
+            const pile = gameState.mirintea.tableau[col];
+            if (pile.length > 0) {
+                const card = pile[pile.length - 1];
                 for (let i = 0; i < 4; i++) {
                     if (canMoveToFoundation(gameState.mirintea.foundations[i], card)) {
-                        gameState.mirintea.foundations[i].push(gameState.mirintea.tableau[col].pop());
-                        if (gameState.mirintea.tableau[col].length > 0) {
-                            const newTop = gameState.mirintea.tableau[col][gameState.mirintea.tableau[col].length - 1];
-                            if(newTop && !newTop.faceUp) newTop.faceUp = true;
+                        gameState.mirintea.foundations[i].push(pile.pop());
+                        // めくれたカードを表にする
+                        if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+                            pile[pile.length - 1].faceUp = true;
                         }
-                        moved = true;
-                        foundFoundationMove = true;
                         updateMirinteaScreen();
+                        movedThisLoop = true;
                         break;
                     }
                 }
-                if (foundFoundationMove) break;
+                if (movedThisLoop) break;
             }
         }
-    }
-    
-    if (moved) return;
+        if (movedThisLoop) { actionsTaken++; continue; }
 
-    // --- ② 手持ち（Waste）から場札（Tableau）へ ---
-    if (gameState.mirintea.waste.length > 0) {
-        const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
-        if (card) {
+        // 優先度2: 【場を整える】場札同士の移動（キング移動や束の移動を含む）
+        for (let fromCol = 0; fromCol < 7; fromCol++) {
+            const fromPile = gameState.mirintea.tableau[fromCol];
+            if (fromPile.length === 0) continue;
+
+            // 表向きのカードの束を探す
+            let firstFaceUpIndex = -1;
+            for (let i = 0; i < fromPile.length; i++) {
+                if (fromPile[i].faceUp) {
+                    firstFaceUpIndex = i;
+                    break;
+                }
+            }
+            if (firstFaceUpIndex === -1) continue;
+
+            const cardToMove = fromPile[firstFaceUpIndex];
+            
+            // 移動する意味があるかチェック（元々キングが空の列にいる場合などは動かさない）
+            const isKingOnEmpty = firstFaceUpIndex === 0 && cardToMove.rank === 'K';
+            if (isKingOnEmpty) continue;
+
+            for (let toCol = 0; toCol < 7; toCol++) {
+                if (fromCol === toCol) continue;
+                
+                // 移動可能か？
+                if (canMoveToTableau(gameState.mirintea.tableau[toCol], cardToMove)) {
+                    // 束ごと移動
+                    const movingCards = fromPile.splice(firstFaceUpIndex);
+                    gameState.mirintea.tableau[toCol].push(...movingCards);
+                    
+                    // 元の場所のカードを表にする
+                    if (gameState.mirintea.tableau[fromCol].length > 0) {
+                        const newTop = gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1];
+                        if (newTop && !newTop.faceUp) newTop.faceUp = true;
+                    }
+                    
+                    updateMirinteaScreen();
+                    movedThisLoop = true;
+                    break;
+                }
+            }
+            if (movedThisLoop) break;
+        }
+        if (movedThisLoop) { actionsTaken++; continue; }
+
+        // 優先度3: 【手札を使う】Waste -> Tableau
+        if (gameState.mirintea.waste.length > 0) {
+            const card = gameState.mirintea.waste[gameState.mirintea.waste.length - 1];
             for (let toCol = 0; toCol < 7; toCol++) {
                 if (canMoveToTableau(gameState.mirintea.tableau[toCol], card)) {
                     gameState.mirintea.tableau[toCol].push(gameState.mirintea.waste.pop());
                     updateMirinteaScreen();
-                    return;
+                    movedThisLoop = true;
+                    break;
                 }
             }
+            if (movedThisLoop) { actionsTaken++; continue; }
         }
-    }
 
-    // --- ③ 場札（Tableau）同士の移動 ---
-    for (let fromCol = 0; fromCol < 7; fromCol++) {
-        const fromPile = gameState.mirintea.tableau[fromCol];
-        if (fromPile.length === 0) continue;
-
-        let firstFaceUpIndex = -1;
-        for (let i = 0; i < fromPile.length; i++) {
-            if (fromPile[i].faceUp) {
-                firstFaceUpIndex = i;
-                break;
-            }
+        // 優先度4: 【新規開拓】山札をめくる（他にやることがない時だけ）
+        if (!movedThisLoop && gameState.mirintea.stock.length > 0) {
+            const card = gameState.mirintea.stock.pop();
+            card.faceUp = true;
+            gameState.mirintea.waste.push(card);
+            updateMirinteaScreen();
+            actionsTaken++;
+            // めくった直後は、そのカードが使えるか次のループで即確認させる
+            continue; 
         }
-        if (firstFaceUpIndex === -1) continue;
 
-        const cardToMove = fromPile[firstFaceUpIndex];
-        const isWorthMoving = (firstFaceUpIndex > 0 && !fromPile[firstFaceUpIndex - 1].faceUp) || (firstFaceUpIndex === 0 && cardToMove.rank === 'K'); 
-        if (firstFaceUpIndex === 0 && cardToMove.rank === 'K') continue;
-        if (!isWorthMoving) continue;
-
-        for (let toCol = 0; toCol < 7; toCol++) {
-            if (fromCol === toCol) continue;
-            if (canMoveToTableau(gameState.mirintea.tableau[toCol], cardToMove)) {
-                const movingCards = fromPile.splice(firstFaceUpIndex);
-                gameState.mirintea.tableau[toCol].push(...movingCards);
-                if (gameState.mirintea.tableau[fromCol].length > 0) {
-                    const newTop = gameState.mirintea.tableau[fromCol][gameState.mirintea.tableau[fromCol].length - 1];
-                    if(newTop && !newTop.faceUp) newTop.faceUp = true;
-                }
-                updateMirinteaScreen();
-                return;
-            }
-        }
-    }
-
-    // --- ④ 山札をめくる ---
-    if (gameState.mirintea.stock.length > 0) {
-        const card = gameState.mirintea.stock.pop();
-        card.faceUp = true;
-        gameState.mirintea.waste.push(card);
-        updateMirinteaScreen();
-        return;
+        // 何もすることがなければループ終了
+        if (!movedThisLoop) break;
     }
     
+    // 勝利判定
     if (checkWinCondition('mirintea')) {
         showGameOver(false);
     }
+    
+    // ★ここを追加！プレイ中に状況を見てセリフを変える
+    checkGameProgressAndTalk();
 }
 
 // Calculate progress (number of cards in foundations)
