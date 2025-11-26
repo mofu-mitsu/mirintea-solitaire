@@ -424,7 +424,6 @@ function startGame() {
     renderGame();
     addFoundationEventListeners();
     addTableauEventListeners();
-    addTrickButtonListener();
     
     // Start Mirintea's AI and shuffle check
     setInterval(() => {
@@ -940,13 +939,11 @@ function createCardElement(card, hideDetails = false, source = null) {
 
     return cardElement;
 }
-// Draw a card from stock (スマホ対応・完成版)
+// Draw a card from stock (修正版：完全手詰まり時は自動トリック発動！)
 function drawFromStock(e) {
-    // イベント情報(e)がある場合だけ実行
+    // イベント情報の処理
     if (e) {
-        // 親要素への伝播を止める（念のため）
         if (e.stopPropagation) e.stopPropagation();
-        // スマホでのダブルタップ判定や拡大などを防ぐ
         if (e.preventDefault) e.preventDefault();
     }
 
@@ -959,13 +956,45 @@ function drawFromStock(e) {
         updatePlayerScreen();
         if (checkWinCondition('player')) showGameOver(true);
     } 
-    // 2. 山札が空っぽなら -> フェア・シャッフル発動！
+    // 2. 山札が空っぽの場合
     else {
-        // 捨て札も無いなら何もしない
-        if (gameState.player.waste.length === 0) return;
+        // A. 捨て札があるなら -> フェア・シャッフル（再利用）
+        if (gameState.player.waste.length > 0) {
+            performFairShuffle('player');
+            showRandomDialogue('shuffle'); 
+        }
+        // B. 捨て札もない（完全な手詰まり）場合 -> ★自動トリック発動！★
+        else {
+            // 場に裏向きカードが残っているか探す
+            let faceDownCandidates = [];
+            for (let col = 0; col < 7; col++) {
+                const pile = gameState.player.tableau[col];
+                // 下から探して、一番上の裏向きカードを見つける
+                for (let i = pile.length - 1; i >= 0; i--) {
+                    if (!pile[i].faceUp) {
+                        faceDownCandidates.push({ col: col, row: i });
+                        break; // その列からは1枚だけ候補にする
+                    }
+                }
+            }
 
-        performFairShuffle('player');
-        showRandomDialogue('shuffle'); 
+            if (faceDownCandidates.length > 0) {
+                // 裏向きカードがあるなら、ランダムに1枚めくる！
+                const target = faceDownCandidates[Math.floor(Math.random() * faceDownCandidates.length)];
+                gameState.player.tableau[target.col][target.row].faceUp = true;
+                
+                // 画面更新
+                updatePlayerScreen();
+                
+                // みりんてゃの反応
+                mirinteaDialogue.textContent = "もう引くカードないから、特別に裏のカードめくってあげる！感謝してよね？♡";
+                updateMirinteaImage('win'); // ドヤ顔
+            } else {
+                // 裏向きカードすらない場合（本当に動かすだけ）
+                mirinteaDialogue.textContent = "めくるカードももうないよ！あとは気合いで並べるだけっ！";
+                updateMirinteaImage('doka'); // 応援？
+            }
+        }
     }
 }
 
