@@ -452,7 +452,7 @@ function makeDraggable(element) {
 
 // Start the game
 function startGame() {
-    const name = playerNameInput.value.trim() || 'みつき';
+    const name = playerNameInput.value.trim() || 'きみ';
     gameState.playerName = name;
     playerNameDisplay.textContent = name;
     localStorage.setItem('solitairePlayerName', name);
