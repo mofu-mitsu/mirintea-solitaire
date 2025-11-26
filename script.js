@@ -1536,41 +1536,44 @@ function attemptSmartMove(col, row) {
 }
 
 
-// ==========================================
-// 1. みりんてゃAI（検品機能付き・完全版）
-// ==========================================
+// 1. みりんてゃAI（修正版：みりんてゃもトリックを使うよ！）
 function mirinteaAI() {
     if (!gameState.gameStarted || gameState.gameOver) return;
 
-    // --- A. 山札補充（リサイクル & シャッフル） ---
-    // 山札が空で、捨て札があるなら
+    // --- A. 山札補充 ---
     if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length > 0) {
-        
         console.log("みりんてゃ: 山札切れ。シャッフルタイム！");
-        
-        // ★ここを新しい関数に変えるだけ！
-        // これでみりんてゃも裏向きカードを含めてシャッフルするようになるよ
         performFairShuffle('mirintea');
-        
-        return; // このターンはシャッフルでおしまい
-    }
-
-    // --- B. 詰み防止トリック（本当に何もできない時だけ） ---
-    if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
-        // 場札に裏向きカードがあるなら、無理やり1枚めくる
-        for (let col = 0; col < 7; col++) {
-            const pile = gameState.mirintea.tableau[col];
-            for (let i = pile.length - 1; i >= 0; i--) {
-                if (!pile[i].faceUp) {
-                    pile[i].faceUp = true;
-                    updateMirinteaScreen();
-                    return; 
-                }
-            }
-        }
         return; 
     }
 
+    // --- B. 詰み防止トリック（みりんてゃVer） ---
+    // 山札も捨て札もない時、裏向きカードを強奪する！
+    if (gameState.mirintea.stock.length === 0 && gameState.mirintea.waste.length === 0) {
+        let faceDownCandidates = [];
+        for (let col = 0; col < 7; col++) {
+            const pile = gameState.mirintea.tableau[col];
+            for (let i = 0; i < pile.length; i++) {
+                if (!pile[i].faceUp) {
+                    faceDownCandidates.push({ col: col, row: i });
+                }
+            }
+        }
+
+        if (faceDownCandidates.length > 0) {
+            // ランダムに奪う
+            const target = faceDownCandidates[Math.floor(Math.random() * faceDownCandidates.length)];
+            const stolenCard = gameState.mirintea.tableau[target.col].splice(target.row, 1)[0];
+            stolenCard.faceUp = true;
+            gameState.mirintea.waste.push(stolenCard);
+            
+            updateMirinteaScreen();
+            console.log("みりんてゃ: 裏向きカードを強奪して手札にした！");
+            return; 
+        }
+    }
+
+    // ... (以下の思考ロジックは変更なしでOK) ...
     let moved = false;
     let foundFoundationMove = true;
     let safetyCount = 0; 
@@ -1823,18 +1826,20 @@ function checkWinCondition(player) {
     return true;
 }
 
-// Show game over screen
+// Show game over screen (修正版：セリフのねじれを解消！)
 function showGameOver(playerWon) {
     gameState.gameOver = true;
     
     if (playerWon) {
-        resultText.textContent = getRandomDialogue('win');
-        resultImage.src = '/mirintea/win.png';
-        updateMirinteaImage('lose');   // みりんてゃが負けて悔しがる
+        // プレイヤーが勝った ＝ みりんてゃは「負け(lose)」のセリフを言う
+        resultText.textContent = getRandomDialogue('lose'); 
+        resultImage.src = 'mirintea/lose.png'; // パス修正
+        updateMirinteaImage('lose');   // 悔しがる画像
     } else {
-        resultText.textContent = getRandomDialogue('lose');
-        resultImage.src = '/mirintea/lose.png';
-        updateMirinteaImage('win');    // みりんてゃが勝ってドヤ顔
+        // プレイヤーが負けた ＝ みりんてゃは「勝ち(win)」のセリフを言う
+        resultText.textContent = getRandomDialogue('win'); 
+        resultImage.src = 'mirintea/win.png'; // パス修正
+        updateMirinteaImage('win');    // ドヤ顔画像
     }
     
     gameOverlay.classList.remove('hidden');
