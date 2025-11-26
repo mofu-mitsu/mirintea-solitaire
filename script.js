@@ -1877,19 +1877,25 @@ function checkWinCondition(player) {
     return true;
 }
 
-// Show game over screen (修正版：セリフのねじれを解消！)
+// Show game over screen (修正版：名前の置換処理を追加したよ！)
 function showGameOver(playerWon) {
     gameState.gameOver = true;
     
     if (playerWon) {
         // プレイヤーが勝った ＝ みりんてゃは「負け(lose)」のセリフを言う
-        resultText.textContent = getRandomDialogue('lose'); 
-        resultImage.src = 'mirintea/lose.png'; // パス修正
+        // ★ここに .replace('{name}', gameState.playerName) を追加！
+        const dialogue = getRandomDialogue('lose');
+        resultText.textContent = dialogue.replace('{name}', gameState.playerName);
+        
+        resultImage.src = 'mirintea/lose.png'; 
         updateMirinteaImage('lose');   // 悔しがる画像
     } else {
         // プレイヤーが負けた ＝ みりんてゃは「勝ち(win)」のセリフを言う
-        resultText.textContent = getRandomDialogue('win'); 
-        resultImage.src = 'mirintea/win.png'; // パス修正
+        // ★こっちにも .replace('{name}', gameState.playerName) を追加！
+        const dialogue = getRandomDialogue('win');
+        resultText.textContent = dialogue.replace('{name}', gameState.playerName);
+        
+        resultImage.src = 'mirintea/win.png'; 
         updateMirinteaImage('win');    // ドヤ顔画像
     }
     
