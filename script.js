@@ -424,7 +424,6 @@ function startGame() {
     renderGame();
     addFoundationEventListeners();
     addTableauEventListeners();
-    addStockEventListener(); // Add this line
     addTrickButtonListener();
     
     // Start Mirintea's AI and shuffle check
@@ -660,18 +659,40 @@ function renderPlayerBoard() {
     // Render stock
     const playerStock = document.getElementById('player-stock');
     playerStock.innerHTML = '';
+    
+    // ★ここを修正！カードがあっても無くてもクリックできるようにするよ
     if (gameState.player.stock.length > 0) {
+        // カードがある場合：裏向きカードを表示
         const cardBack = document.createElement('div');
         cardBack.className = 'card back';
-        
-        // ★★★ 削除またはコメントアウトする行 ★★★
-        // cardBack.addEventListener('click', drawFromStock); 
-        // ↑ これがあると2回反応しちゃうから消して！
-        
+        // 直接クリックイベントをつける！（これが一番確実）
+        cardBack.addEventListener('click', drawFromStock);
         playerStock.appendChild(cardBack);
+    } else {
+        // カードがない場合：空の枠（リサイクルマーク的な）を表示
+        // これがないと、シャッフルしたくてもクリックする場所がなくなっちゃう！
+        const emptySlot = document.createElement('div');
+        emptySlot.className = 'card empty-slot'; // CSSで枠線とかつけると分かりやすいかも
+        emptySlot.style.border = '2px dashed rgba(255, 255, 255, 0.5)'; // 簡易的な見た目
+        emptySlot.style.backgroundColor = 'transparent';
+        
+        // 空っぽの枠をクリックしたらシャッフル発動！
+        emptySlot.addEventListener('click', drawFromStock);
+        playerStock.appendChild(emptySlot);
     }
     
     // ... (以下、WasteやFoundationの処理はそのまま) ...
+
+    // Render waste
+    const playerWaste = document.getElementById('player-waste');
+    playerWaste.innerHTML = '';
+    if (gameState.player.waste.length > 0) {
+        const topCard = gameState.player.waste[gameState.player.waste.length - 1];
+        // 捨て札の一番上も操作できるようにする
+        const sourceInfo = { type: 'waste' }; // ソース情報を付与
+        const cardElement = createCardElement(topCard, false, sourceInfo);
+        playerWaste.appendChild(cardElement);
+    }
 
     // Render foundations
     for (let i = 0; i < 4; i++) {
@@ -683,8 +704,6 @@ function renderPlayerBoard() {
             foundation.appendChild(cardElement);
         }
     }
-    
-    // Remove tableau rendering - now handled by renderTableau function
 }
 
 // Render Mirintea's board
