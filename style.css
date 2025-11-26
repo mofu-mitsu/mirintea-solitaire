@@ -11,6 +11,18 @@ body {
     color: #333;
 }
 
+/* モーダル類（変更なし） */
+.modal { display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+.modal.hidden { display: none; }
+.modal-content { background: white; padding: 30px; border-radius: 15px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-width: 400px; width: 90%; }
+.modal-content h2 { margin-bottom: 20px; color: #ff66b2; }
+#playerName { width: 100%; padding: 12px; margin-bottom: 20px; border: 2px solid #ff66b2; border-radius: 8px; font-size: 16px; }
+#startButton, #closeRulesButton, #restartButton {
+    background: #ff66b2; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; width: 100%; margin-top: 10px;
+}
+#startButton:hover, #closeRulesButton:hover, #restartButton:hover { background: #ff3399; }
+.rules-button { background: #66ccff; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.3s; width: 100%; }
+.rules-button:hover { background: #3399cc; }
 /* ルール説明モーダルのスタイル修正 */
 .rules-modal {
     max-width: 500px; /* 横幅を少し広げる */
