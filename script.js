@@ -939,7 +939,7 @@ function createCardElement(card, hideDetails = false, source = null) {
 
     return cardElement;
 }
-// Draw a card from stock (修正版：完全手詰まり時は自動トリック発動！)
+// Draw a card from stock (修正版：裏向きカードを手札に強奪するver)
 function drawFromStock(e) {
     // イベント情報の処理
     if (e) {
@@ -969,30 +969,39 @@ function drawFromStock(e) {
             let faceDownCandidates = [];
             for (let col = 0; col < 7; col++) {
                 const pile = gameState.player.tableau[col];
-                // 下から探して、一番上の裏向きカードを見つける
-                for (let i = pile.length - 1; i >= 0; i--) {
+                // 下から探して、裏向きのカードを全部候補にする
+                for (let i = 0; i < pile.length; i++) {
                     if (!pile[i].faceUp) {
                         faceDownCandidates.push({ col: col, row: i });
-                        break; // その列からは1枚だけ候補にする
                     }
                 }
             }
 
             if (faceDownCandidates.length > 0) {
-                // 裏向きカードがあるなら、ランダムに1枚めくる！
-                const target = faceDownCandidates[Math.floor(Math.random() * faceDownCandidates.length)];
-                gameState.player.tableau[target.col][target.row].faceUp = true;
+                // 候補からランダムに1つ選ぶ
+                const targetIndex = Math.floor(Math.random() * faceDownCandidates.length);
+                const target = faceDownCandidates[targetIndex];
+
+                // ★ここが変更点！★
+                // 1. 場札からそのカードを「抜き取る」 (splice)
+                const stolenCard = gameState.player.tableau[target.col].splice(target.row, 1)[0];
+                
+                // 2. 表向きにする
+                stolenCard.faceUp = true;
+
+                // 3. 手札（Waste）に加える！
+                gameState.player.waste.push(stolenCard);
                 
                 // 画面更新
                 updatePlayerScreen();
                 
                 // みりんてゃの反応
-                mirinteaDialogue.textContent = "もう引くカードないから、特別に裏のカードめくってあげる！感謝してよね？♡";
+                mirinteaDialogue.textContent = "裏向きのカード、こっそり手札に持ってきちゃった♡ これなら置けるでしょ？";
                 updateMirinteaImage('win'); // ドヤ顔
             } else {
                 // 裏向きカードすらない場合（本当に動かすだけ）
                 mirinteaDialogue.textContent = "めくるカードももうないよ！あとは気合いで並べるだけっ！";
-                updateMirinteaImage('doka'); // 応援？
+                updateMirinteaImage('doka'); // 応援
             }
         }
     }
