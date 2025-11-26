@@ -1386,6 +1386,7 @@ function moveCardToTableau(targetCol) {
     } else {
         // If the move is not valid, put the cards back
         gameState.player.tableau[col].splice(row, 0, ...cardsToMove);
+        autoPlayToFoundations();
         // Re-render game
         renderGame();
     }
@@ -2208,5 +2209,81 @@ function useTrick() {
     if(btn) {
         btn.classList.add('used');
         setTimeout(() => btn.classList.remove('used'), 500);
+    }
+}
+
+// ★新機能：自動で組札に飛んでいく機能
+function autoPlayToFoundations() {
+    let moved = true;
+    let loopCount = 0;
+    
+    // 連鎖的に動くかもしれないので、動かなくなるまで繰り返す
+    while (moved && loopCount < 20) { // 無限ループ防止
+        moved = false;
+        loopCount++;
+
+        // 1. 場札の一番上をチェック
+        for (let col = 0; col < 7; col++) {
+            const pile = gameState.player.tableau[col];
+            if (pile.length > 0) {
+                const card = pile[pile.length - 1];
+                for (let i = 0; i < 4; i++) {
+                    if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+                        // 移動実行
+                        gameState.player.foundations[i].push(pile.pop());
+                        // 下のカードがあれば表にする
+                        if (pile.length > 0 && !pile[pile.length - 1].faceUp) {
+                            pile[pile.length - 1].faceUp = true;
+                        }
+                        moved = true;
+                        break; // Foundationループを抜けて再スキャン
+                    }
+                }
+            }
+        }
+
+        // 2. 捨て札(Waste)もチェック
+        if (gameState.player.waste.length > 0) {
+            const card = gameState.player.waste[gameState.player.waste.length - 1];
+            for (let i = 0; i < 4; i++) {
+                if (canMoveToFoundation(gameState.player.foundations[i], card)) {
+                    gameState.player.foundations[i].push(gameState.player.waste.pop());
+                    moved = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (loopCount > 1) {
+        // 何か動いたら画面更新と勝利判定
+        renderGame();
+        if (checkWinCondition('player')) showGameOver(true);
+    }
+}
+
+// ★新機能：ゲーム状況を見て喋る
+function checkGameProgressAndTalk() {
+    // まだ始まってすぐなら喋らない
+    if (gameState.player.foundations.flat().length < 2 && gameState.mirintea.foundations.flat().length < 2) return;
+
+    // プレイヤーとみりんてゃの進捗（組札の枚数）を比較
+    const playerScore = calculateProgress('player');
+    const mirinteaScore = calculateProgress('mirintea');
+    
+    const diff = mirinteaScore - playerScore;
+
+    // ランダムな確率で喋る（毎回喋るとうるさいので20%くらい）
+    if (Math.random() > 0.2) return;
+
+    if (diff >= 3) {
+        // みりんてゃが3枚以上リード -> winningセリフ
+        showRandomDialogue('winning');
+    } else if (diff <= -3) {
+        // プレイヤーが3枚以上リード -> losingセリフ
+        showRandomDialogue('losing');
+    } else {
+        // 接戦 -> tsundereセリフ
+        showRandomDialogue('tsundere');
     }
 }
